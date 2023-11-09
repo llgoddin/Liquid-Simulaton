@@ -1,15 +1,15 @@
 from Vector2D import Vector2D
 
-class Particle(Vector2D):
-    def __init__(self, x, y, radius, magnitude, direction):
-        super().__init__(magnitude, direction)
-        
+class Particle():
+    def __init__(self, x, y, radius):
         self.MAX_X = None
         self.MIN_X = None
         self.MAX_Y = None
         self.MIN_Y = None
 
         self.mass = 1
+
+        self.velocity = Vector2D(0, 0)
 
         self.x = x
         self.y = y
@@ -20,10 +20,10 @@ class Particle(Vector2D):
 
     def move(self, dt):
 
-        self.x += self.x_vel * dt
-        self.y += self.y_vel * dt
+        grav_accel = Vector2D(9.81, 180)
 
-        self.y_vel = self.y_vel + -9.81 * dt
+        self.x += self.velocity.x * dt
+        self.y += self.velocity.y * dt
         
         if self.MAX_X and self.x > self.MAX_X:
             self.x = self.MAX_X
@@ -44,7 +44,10 @@ class Particle(Vector2D):
         self.MAX_Y = max
         self.MIN_Y = min
 
-    def accelerate(self, acc_vector, delta_time):
-        self.x_vel += acc_vector.x * delta_time
-        self.y_vel += acc_vector.y * delta_time
+    def accelerate(self, acc_vector):
+        self.velocity.x += acc_vector.x
+        self.velocity.y += acc_vector.y
+
+
+    
         

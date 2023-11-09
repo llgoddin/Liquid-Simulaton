@@ -1,6 +1,7 @@
 import pygame
 import time
 import math
+from Vector2D import Vector2D
 from Particle import Particle
 
 def render_particles(screen, particles):
@@ -16,7 +17,7 @@ def create_particles(num):
     radius = 5
 
     for _ in range(num_particles):
-        particles.append(Particle(x=0, y=0, radius=radius, magnitude=10, direction=270))
+        particles.append(Particle(x=0, y=0, radius=radius))
 
     square = round(math.ceil(math.sqrt(num_particles)), 0)
 
@@ -72,6 +73,8 @@ while run:
     screen.fill((230, 230, 230))
 
     for particle in particles:
+        grav_accel = Vector2D(9.81, 180)
+        particle.accelerate(grav_accel)
         particle.move(dt)
 
     render_particles(screen, particles)
