@@ -1,4 +1,5 @@
-from Vector2D import Vector2D
+from New_Vector2D import Vector2D
+import math
 
 class Particle():
     def __init__(self, x, y, radius):
@@ -7,9 +8,17 @@ class Particle():
         self.MAX_Y = None
         self.MIN_Y = None
 
-        self.mass = 1
+        self.mass = 100
+        self.bounciness = .9
+
+        self.influence_radius = 50
+
+        self.net_force = Vector2D(0, 0)
 
         self.velocity = Vector2D(0, 0)
+        self.acceleration = Vector2D(0, 0)
+
+        self.velocity_decay = .99
 
         self.x = x
         self.y = y
@@ -18,23 +27,45 @@ class Particle():
         self.color = (0, 0, 255)
        
 
-    def move(self, dt):
+    def __str__(self):
+        return f'Coords = ({self.x}, {self.y}) V = ({self.velocity}), A = ({self.acceleration})'
 
-        grav_accel = Vector2D(9.81, 180)
+    def move(self, dt, verbose=False):
+        self.acceleration = self.net_force / self.mass
+
+        self.net_force = Vector2D(0, 0)
+
+        if self.MAX_Y and self.y > self.MAX_Y:
+            self.velocity.y = self.velocity.y * -1 * self.bounciness
+            self.y = self.MAX_Y
+
+        elif self.MIN_Y and self.y < self.MIN_Y:
+            self.velocity.y = self.velocity.y * -1 * self.bounciness
+            self.y = self.MIN_Y
+
+
+        if self.MAX_X and self.x > self.MAX_X:
+            self.velocity.x = self.velocity.x * -1 * self.bounciness
+            self.x = self.MAX_Y
+
+        elif self.MIN_X and self.x < self.MIN_X:
+            self.velocity.x = self.velocity.x * -1 * self.bounciness
+            self.X = self.MIN_X
+        
+
+        if verbose:
+            print(self)
+
+        self.velocity = self.velocity + self.acceleration
 
         self.x += self.velocity.x * dt
         self.y += self.velocity.y * dt
-        
-        if self.MAX_X and self.x > self.MAX_X:
-            self.x = self.MAX_X
-        elif self.MIN_X and self.x < self.MIN_X:
-            self.x = self.MIN_X
 
+        self.velocity.x = self.velocity.x * self.velocity_decay
+        self.velocity.y = self.velocity.y * self.velocity_decay
 
-        if self.MAX_Y and self.y > self.MAX_X:
-            self.y = self.MAX_Y
-        elif self.MIN_Y and self.y < self.MIN_Y:
-            self.y = self.MIN_Y
+        if verbose:
+            print(self)
 
     def bind_x(self, max, min):
         self.MAX_X = max
@@ -44,9 +75,43 @@ class Particle():
         self.MAX_Y = max
         self.MIN_Y = min
 
-    def accelerate(self, acc_vector):
-        self.velocity.x += acc_vector.x
-        self.velocity.y += acc_vector.y
+    def repulsion_force(self, object2):
+        MAX_FORCE = 10
+        FORCE_MULTIPLIER = 5
+
+        dist = self.get_distance(object2)
+
+        x_dist = self.x - object2.x
+        y_dist = self.y - object2.y
+
+        if y_dist != 0:
+            y_direc = y_dist/abs(y_dist)
+        else:
+            y_direc = 0
+
+        if x_dist != 0:
+            x_direc = x_dist/abs(x_dist)
+        else:
+            x_direc = 0
+
+        if (dist > self.influence_radius):
+            return Vector2D(0,0)
+
+        force_value = (self.influence_radius * 2 - dist) * FORCE_MULTIPLIER
+
+        r_force = Vector2D(force_value * x_direc, force_value * y_direc)
+
+        return r_force
+
+    def get_distance(self, object2):
+        x = self.x - object2.x
+        y = self.y - object2.y
+
+        return math.sqrt(x**2 + y**2)
+
+    def apply_force(self, force_vector):
+        self.net_force = self.net_force + force_vector
+
 
 
     
