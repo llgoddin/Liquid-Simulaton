@@ -9,6 +9,9 @@ class Particle_Manager():
         self.REPULSE = repulse
         self.particles = []
         
+        self.X_BOUND = x_bounds
+        self.Y_BOUND = y_bounds
+
         for _ in range(num_particles):
             self.particles.append(Particle(x=0, y=0, radius=radius))
 
@@ -36,6 +39,15 @@ class Particle_Manager():
 
                 i += 1
     
+    def render_bounds(self, screen):
+        X_OFFSET = screen.get_width()/2
+        Y_OFFSET = -screen.get_height()/2
+        
+        RENDER_X = -self.X_BOUND + X_OFFSET
+        RENDER_Y = screen.get_height() - self.Y_BOUND + Y_OFFSET
+
+        pygame.draw.rect(screen, (40, 170, 40), pygame.Rect(RENDER_X, RENDER_Y, self.X_BOUND * 2, self.Y_BOUND * 2), 3)
+
     def render_particle(self, screen, particle):
         X_OFFSET = screen.get_width()/2
         Y_OFFSET = -screen.get_height()/2
@@ -98,7 +110,8 @@ class Particle_Manager():
 
         # Render Layer 1
         for particle in self.particles:
-            self.render_particle_influence(screen, particle)
+            self.render_bounds(screen)
+            #self.render_particle_influence(screen, particle)
 
         # Render Layer 2
         for particle in self.particles:

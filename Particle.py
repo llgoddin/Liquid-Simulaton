@@ -25,7 +25,6 @@ class Particle():
 
         self.radius = radius
         self.color = (0, 0, 255)
-       
 
     def __str__(self):
         return f'Coords = ({self.x}, {self.y}) V = ({self.velocity}), A = ({self.acceleration})'
@@ -34,23 +33,6 @@ class Particle():
         self.acceleration = self.net_force / self.mass
 
         self.net_force = Vector2D(0, 0)
-
-        if self.MAX_Y and self.y > self.MAX_Y:
-            self.velocity.y = self.velocity.y * -1 * self.bounciness
-            self.y = self.MAX_Y
-
-        elif self.MIN_Y and self.y < self.MIN_Y:
-            self.velocity.y = self.velocity.y * -1 * self.bounciness
-            self.y = self.MIN_Y
-
-
-        if self.MAX_X and self.x > self.MAX_X:
-            self.velocity.x = self.velocity.x * -1 * self.bounciness
-            self.x = self.MAX_Y
-
-        elif self.MIN_X and self.x < self.MIN_X:
-            self.velocity.x = self.velocity.x * -1 * self.bounciness
-            self.X = self.MIN_X
         
 
         if verbose:
@@ -64,6 +46,8 @@ class Particle():
         self.velocity.x = self.velocity.x * self.velocity_decay
         self.velocity.y = self.velocity.y * self.velocity_decay
 
+        self.check_bounds()
+
         if verbose:
             print(self)
 
@@ -74,6 +58,30 @@ class Particle():
     def bind_y(self, max, min):
         self.MAX_Y = max
         self.MIN_Y = min
+
+    def check_bounds(self):
+        BOUNCE = True
+
+        if self.MAX_Y and self.y > self.MAX_Y:
+            if BOUNCE:
+                self.velocity.y = self.velocity.y * -1 * self.bounciness
+            self.y = self.MAX_Y
+
+        elif self.MIN_Y and self.y < self.MIN_Y:
+            if BOUNCE:
+                self.velocity.y = self.velocity.y * -1 * self.bounciness
+            self.y = self.MIN_Y
+
+
+        if self.MAX_X and self.x > self.MAX_X:
+            if BOUNCE:
+                self.velocity.x = self.velocity.x * -1 * self.bounciness
+            self.x = self.MAX_Y
+
+        elif self.MIN_X and self.x < self.MIN_X:
+            if BOUNCE:
+                self.velocity.x = self.velocity.x * -1 * self.bounciness
+            self.x = self.MIN_X
 
     def repulsion_force(self, object2):
         MAX_FORCE = 10

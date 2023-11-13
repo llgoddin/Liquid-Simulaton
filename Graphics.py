@@ -22,13 +22,15 @@ NUM_PARTICLES = 100
 
 VERTICAL_SPAWN = True
 
-GRAVITY = True
+GRAVITY = False
 REPULSE = True
+
+CONTAINER = (200, 200)
 
 
 # Calculated Variables
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-liquid = Particle_Manager(num_particles=NUM_PARTICLES, radius=5, x_bounds=SCREEN_WIDTH/2, y_bounds=SCREEN_HEIGHT/2, gravity=GRAVITY, repulse=REPULSE, vertical_spawn=VERTICAL_SPAWN)
+liquid = Particle_Manager(num_particles=NUM_PARTICLES, radius=5, x_bounds=CONTAINER[0]/2, y_bounds=CONTAINER[1]/2, gravity=GRAVITY, repulse=REPULSE, vertical_spawn=VERTICAL_SPAWN)
 
 now = 0
 prev_time = None
