@@ -7,15 +7,32 @@ from Particle_Manager import Particle_Manager
 from Button import Button
 from Dashboard import Dashboard
 
-def update_container_settings(p_manager, grav_btn):
-    p_manager.set_gravity(grav_btn.active)
+def update_container_settings(p_manager, dash):
+    for element in dash.get_elements():
+        match element.func_str:
+            case 'Gravity':
+                p_manager.set_gravity(element.active)
+            case 'Repulse':
+                p_manager.set_repulse(element.active)
+            case 'Add Particle':
+                if element.get_clicked():
+                    p_manager.spawn_particle()
+            case 'Subtract Particle':
+                if element.get_clicked():
+                    p_manager.delete_particle()
 
 
-btn1 = Button(10, 10, 100, 40, (0, 0, 200), 'Gravity', True)
+grav_btn = Button(10, 10, 100, 40, (0, 0, 200), 'Gravity', True, 'Gravity')
+repulse_btn = Button(10, 60, 100, 40, (80, 0, 200), 'Repulse', True, 'Repulse')
+add_particle_btn = Button(10, 110, 100, 40, (120, 0, 200), '+ Particles', False, 'Add Particle')
+subtract_particle_btn = Button(10, 170, 100, 40, (80, 30, 200), '- Particles', False, 'Subtract Particle')
 
 dash = Dashboard(600, 0, 200, 800)
 
-dash.add_element(btn1)
+dash.add_element(grav_btn)
+dash.add_element(repulse_btn)
+dash.add_element(add_particle_btn)
+dash.add_element(subtract_particle_btn)
 
 pygame.init()
 CLOCK = pygame.time.Clock()
@@ -30,7 +47,7 @@ FPS = 120
 
 SLOW_TIME_BY = 1
 
-NUM_PARTICLES = 2
+NUM_PARTICLES = 4
 
 VERTICAL_SPAWN = True
 
@@ -80,7 +97,7 @@ while run:
         if event.type == pygame.MOUSEBUTTONUP:
             dash.reset_clicked_elements()
 
-    update_container_settings(liquid, btn1)
+    update_container_settings(liquid, dash)
 
     dash.render(screen=screen)
 

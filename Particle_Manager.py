@@ -1,14 +1,17 @@
 from Particle import Particle
 from New_Vector2D import Vector2D
-import math, pygame
+import math, pygame, random
 
 class Particle_Manager():
 
     def __init__(self, num_particles, radius, x_bounds, y_bounds, gravity, repulse, vertical_spawn):
         self.GRAVITY = gravity
         self.REPULSE = repulse
+
         self.particles = []
-        
+        self.num_particles = num_particles
+        self.particle_radius = radius
+
         self.X_BOUND = x_bounds
         self.Y_BOUND = y_bounds
 
@@ -134,3 +137,18 @@ class Particle_Manager():
     def set_repulse(self, value=False):
         if value == True or value == False:
             self.REPULSE = value
+
+    def spawn_particle(self):
+
+        new_particle = Particle(random.randint(-5,5), random.randint(-5,5), self.particle_radius)
+
+        new_particle.bind_x(self.X_BOUND, -self.X_BOUND)
+        new_particle.bind_y(self.Y_BOUND, -self.Y_BOUND)
+        
+        self.particles.append(new_particle)
+        self.num_particles += 1
+
+    def delete_particle(self):
+        if len(self.particles) > 1:
+            self.num_particles -= 1
+            self.particles.pop()

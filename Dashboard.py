@@ -16,6 +16,9 @@ class Dashboard(GUI_Element):
 
         element.set_parent_coords((self.x, self.y))
 
+    def get_elements(self):
+        return self.elements
+
     def check_click(self, pos):
         for element in self.elements:
             element.set_clicked(element.contains(pos))

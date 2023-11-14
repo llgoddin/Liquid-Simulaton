@@ -2,8 +2,10 @@ from GUI_Element import GUI_Element
 import pygame
 
 class Button(GUI_Element):
-    def __init__(self, x, y, width=100, height=100, color=(0, 0, 200), text='Button 1', active=False):
+    def __init__(self, x, y, width=100, height=100, color=(0, 0, 200), text='Button 1', active=False, function_str='None'):
         super().__init__()
+
+        self.func_str = function_str
 
         self.x, self.y = x, y
         self.width, self.height = width, height
@@ -31,7 +33,9 @@ class Button(GUI_Element):
             self.clicked = value
             if value == True:
                 self.active = False if self.active else True
-            print(f'Set Clicked to {value}')
+
+    def get_clicked(self):
+        return self.clicked            
 
     def get_active(self):
         return self.active
