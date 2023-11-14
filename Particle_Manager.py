@@ -111,7 +111,7 @@ class Particle_Manager():
         # Render Layer 1
         for particle in self.particles:
             self.render_bounds(screen)
-            #self.render_particle_influence(screen, particle)
+            self.render_particle_influence(screen, particle)
 
         # Render Layer 2
         for particle in self.particles:
@@ -121,3 +121,16 @@ class Particle_Manager():
         for particle in self.particles:
             self.render_particle(screen, particle)
         
+    def get_gravity(self):
+        return self.GRAVITY
+    
+    def set_gravity(self, value=False):
+        if value == True or value == False:
+            self.GRAVITY = value
+
+    def get_repulse(self):
+        return self.REPULSE
+    
+    def set_repulse(self, value=False):
+        if value == True or value == False:
+            self.REPULSE = value
