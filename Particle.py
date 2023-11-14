@@ -33,7 +33,6 @@ class Particle():
         self.acceleration = self.net_force / self.mass
 
         self.net_force = Vector2D(0, 0)
-        
 
         if verbose:
             print(self)
@@ -64,6 +63,7 @@ class Particle():
 
         if self.MAX_Y and self.y > self.MAX_Y:
             if BOUNCE:
+                
                 self.velocity.y = self.velocity.y * -1 * self.bounciness
             self.y = self.MAX_Y
 
@@ -76,7 +76,7 @@ class Particle():
         if self.MAX_X and self.x > self.MAX_X:
             if BOUNCE:
                 self.velocity.x = self.velocity.x * -1 * self.bounciness
-            self.x = self.MAX_Y
+            self.x = self.MAX_X
 
         elif self.MIN_X and self.x < self.MIN_X:
             if BOUNCE:
@@ -110,6 +110,18 @@ class Particle():
         r_force = Vector2D(force_value * x_direc, force_value * y_direc)
 
         return r_force
+
+    def force_towards_mouse(self, pos):
+        MOUSE_FORCE = 10
+
+        mouse_pos = Vector2D(pos[0], pos[1])
+        my_pos = Vector2D(self.x, self.y)
+
+        dist_vector = mouse_pos - my_pos
+
+        force = dist_vector * MOUSE_FORCE
+
+        self.apply_force(force)
 
     def get_distance(self, object2):
         x = self.x - object2.x
