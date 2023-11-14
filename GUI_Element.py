@@ -1,13 +1,12 @@
 
 class GUI_Element():
-    def __init__(self):
-        self.x = 0
-        self.y = 0
-
-        self.width = 100
-        self.height = 100
-
+    def __init__(self, x=0, y=0, width=100, height=100, color=(255, 0, 0)):
+        self.x, self.y = x, y
         self.parent_x, self.parent_y = 0, 0
+
+        self.width, self.height = width, height
+
+        self.color = color
 
         self.clicked = False
 

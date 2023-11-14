@@ -12,20 +12,43 @@ def update_container_settings(p_manager, dash):
         match element.func_str:
             case 'Gravity':
                 p_manager.set_gravity(element.active)
+
             case 'Repulse':
                 p_manager.set_repulse(element.active)
-            case 'Add Particle':
+
+            case '+ Particle':
                 if element.get_clicked():
                     p_manager.spawn_particle()
-            case 'Subtract Particle':
+
+            case '- Particle':
                 if element.get_clicked():
                     p_manager.delete_particle()
+
+            #TO DO - IMPLEMENT
+            case '+ Container Width':
+                #p_manager.increase_container_width()
+                continue
+            case '- Container Width':
+                #p_manager.decrease_container_width()
+                continue
+            case '+ Container Height':
+                #p_manager.increase_container_height()
+                continue
+            case '- Container Height':
+                #p_manager.decrease_container_height()
+                continue
+            case '+ Repulse Force':
+                #p_manager.increase_repulse()
+                continue
+            case '- Repulse Force':
+                #p_manager.decrease_repulse()
+                continue
 
 
 grav_btn = Button(10, 10, 100, 40, (0, 0, 200), 'Gravity', True, 'Gravity')
 repulse_btn = Button(10, 60, 100, 40, (80, 0, 200), 'Repulse', True, 'Repulse')
-add_particle_btn = Button(10, 110, 100, 40, (120, 0, 200), '+ Particles', False, 'Add Particle')
-subtract_particle_btn = Button(10, 170, 100, 40, (80, 30, 200), '- Particles', False, 'Subtract Particle')
+add_particle_btn = Button(10, 110, 100, 40, (120, 0, 200), '+ Particles', False, '+ Particle')
+subtract_particle_btn = Button(10, 170, 100, 40, (80, 30, 200), '- Particles', False, '- Particle')
 
 dash = Dashboard(600, 0, 200, 800)
 
@@ -64,7 +87,6 @@ liquid = Particle_Manager(num_particles=NUM_PARTICLES, radius=5, x_bounds=CONTAI
 
 now = 0
 prev_time = None
-test_length = FPS * 30
 
 run = True
 
@@ -105,9 +127,4 @@ while run:
 
     pygame.display.update()
 
-    test_length -= 1
-
-    if test_length < 0:
-        run = False
-
-    #run = False
+pygame.quit()

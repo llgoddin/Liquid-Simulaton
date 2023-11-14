@@ -3,12 +3,8 @@ from GUI_Element import GUI_Element
 
 class Dashboard(GUI_Element):
     def __init__(self, x, y, width, height):
-        super().__init__()
+        super().__init__(x, y, width, height, color=(100, 100, 100))
 
-        self.x, self.y = x, y
-        self.width, self.height = width, height
-
-        self.color = (100, 100, 100)
         self.elements = []
 
     def add_element(self, element):

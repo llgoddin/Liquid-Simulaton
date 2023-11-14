@@ -3,14 +3,10 @@ import pygame
 
 class Button(GUI_Element):
     def __init__(self, x, y, width=100, height=100, color=(0, 0, 200), text='Button 1', active=False, function_str='None'):
-        super().__init__()
+        super().__init__(x, y, width, height, color)
 
         self.func_str = function_str
 
-        self.x, self.y = x, y
-        self.width, self.height = width, height
-
-        self.color = color
         self.text = text
 
         self.active = active
