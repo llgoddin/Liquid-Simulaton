@@ -63,7 +63,7 @@ class Particle():
 
         if self.MAX_Y and self.y > self.MAX_Y:
             if BOUNCE:
-                
+
                 self.velocity.y = self.velocity.y * -1 * self.bounciness
             self.y = self.MAX_Y
 
@@ -111,15 +111,29 @@ class Particle():
 
         return r_force
 
-    def force_towards_mouse(self, pos):
-        MOUSE_FORCE = 10
+    def force_towards_mouse(self, pos, negative=False):
+        MOUSE_FORCE = 1000
 
         mouse_pos = Vector2D(pos[0], pos[1])
         my_pos = Vector2D(self.x, self.y)
 
-        dist_vector = mouse_pos - my_pos
+        x_dist = self.x - pos[0]
+        y_dist = self.y - pos[1]
 
-        force = dist_vector * MOUSE_FORCE
+        if y_dist != 0:
+            y_direc = y_dist/abs(y_dist)
+        else:
+            y_direc = 0
+
+        if x_dist != 0:
+            x_direc = x_dist/abs(x_dist)
+        else:
+            x_direc = 0
+
+        force = -Vector2D(MOUSE_FORCE * x_direc, MOUSE_FORCE * y_direc)
+        
+        if negative:
+            force = -force
 
         self.apply_force(force)
 

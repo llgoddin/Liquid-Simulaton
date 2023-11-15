@@ -87,16 +87,11 @@ class Particle_Manager():
         # RENDER_Y = screen.get_height() - particle.y + Y_OFFSET
         return 0
 
-    def apply_mouse_force(self, pos):
-        # X_OFFSET = screen.get_width()/2
-        # Y_OFFSET = -screen.get_height()/2
-        
-        # RENDER_X = particle.x + X_OFFSET
-        # RENDER_Y = screen.get_height() - particle.y + Y_OFFSET
+    def apply_mouse_force(self, pos, negative=False):
+        local_pos = (-(self.x - pos[0]), self.y - pos[1])
 
-        # for particle in self.particles:
-        #     particle.force_towards_mouse(pos)
-        return 0
+        for particle in self.particles:
+            particle.force_towards_mouse(local_pos, negative)
 
     # Render Methods
     def render_bounds(self, screen):

@@ -7,6 +7,16 @@ from Particle_Manager import Particle_Manager
 from Button import Button
 from Dashboard import Dashboard
 
+colors = {
+    'red': (255, 0, 0),
+    'green': (0, 255, 0),
+    'blue': (0, 0, 255),
+    'blue': (0, 0, 0),
+    'blue': (0, 0, 0),
+    'blue': (0, 0, 0),
+    'blue': (0, 0, 0),
+}
+
 def update_container_settings(p_manager, dash):
     for element in dash.get_elements():
         if element.get_clicked():
@@ -97,6 +107,9 @@ dash_tick = 0
 now = 0
 prev_time = None
 
+mouse_left = False
+mouse_right = False
+
 run = True
 
 # Main Loop
@@ -118,20 +131,39 @@ while run:
 
     screen.fill((230, 230, 230))
 
+    if mouse_left:
+        pos = pygame.mouse.get_pos()
+        if not pos[0] > dash.x:
+            liquid.apply_mouse_force(pos)
+    
+    if mouse_right:
+        pos = pygame.mouse.get_pos()
+        if not pos[0] > dash.x:
+            liquid.apply_mouse_force(pos, True)
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
 
         if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:
+                mouse_left = True
+
+            elif event.button == 3:
+                mouse_right = True
+
             pos = pygame.mouse.get_pos()
 
             if pos[0] > dash.x:
                 dash.check_click(pos)
-            else:
-                print("else")
-                liquid.apply_mouse_force(pos)
 
         if event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 1:
+                mouse_left = False
+
+            elif event.button == 3:
+                mouse_right = False
+
             dash.reset_clicked_elements()
 
     update_container_settings(liquid, dash)
