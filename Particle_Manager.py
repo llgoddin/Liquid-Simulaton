@@ -83,8 +83,8 @@ class Particle_Manager():
         # X_OFFSET = screen.get_width()/2
         # Y_OFFSET = -screen.get_height()/2
         
-        # RENDER_X = particle.x + X_OFFSET
-        # RENDER_Y = screen.get_height() - particle.y + Y_OFFSET
+        # RENDER_X = particle.pos.x + X_OFFSET
+        # RENDER_Y = screen.get_height() - particle.pos.y + Y_OFFSET
         return 0
 
     def apply_mouse_force(self, pos, negative=False):
@@ -101,21 +101,21 @@ class Particle_Manager():
         pygame.draw.rect(screen, (40, 170, 40), pygame.Rect(RENDER_X, RENDER_Y, self.X_BOUND * 2, self.Y_BOUND * 2), 3)
 
     def render_particle(self, screen, particle):
-        RENDER_X = particle.x + self.x
-        RENDER_Y = -particle.y + self.y
+        RENDER_X = particle.pos.x + self.x
+        RENDER_Y = -particle.pos.y + self.y
 
         pygame.draw.circle(screen, particle.color, (RENDER_X, RENDER_Y), particle.radius)
 
     def render_particle_influence(self, screen, particle):
-        RENDER_X = particle.x + self.x
-        RENDER_Y = -particle.y + self.y
+        RENDER_X = particle.pos.x + self.x
+        RENDER_Y = -particle.pos.y + self.y
 
         influence_color = (240, 220, 220)
         pygame.draw.circle(screen, influence_color, (RENDER_X, RENDER_Y), particle.influence_radius)
         
     def render_particle_velocity(self, screen, particle):
-        RENDER_X = particle.x + self.x
-        RENDER_Y = -particle.y + self.y
+        RENDER_X = particle.pos.x + self.x
+        RENDER_Y = -particle.pos.y + self.y
 
         if abs(particle.velocity.x) > particle.influence_radius:
             line_x = particle.influence_radius * (abs(particle.velocity.x)/particle.velocity.x)
