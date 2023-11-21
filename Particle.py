@@ -8,7 +8,7 @@ class Particle():
         self.MAX_Y = None
         self.MIN_Y = None
 
-        self.mass = 100
+        self.mass = 1
         self.bounciness = .9
 
         self.influence_radius = 50
@@ -79,8 +79,8 @@ class Particle():
             self.pos.x = self.MIN_X
 
     def repulsion_force(self, object2):
-        MAX_FORCE = 10
-        FORCE_MULTIPLIER = 5
+        MAX_FORCE = 50
+        FORCE_MULTIPLIER = 100
 
         dist = self.get_distance(object2)
 
@@ -97,10 +97,14 @@ class Particle():
         else:
             x_direc = 0
 
-        if (dist > self.influence_radius):
+        if (dist > self.influence_radius * 2):
             return Vector2D(0,0)
 
-        force_value = (self.influence_radius * 2 - dist) * FORCE_MULTIPLIER
+        force_value = 0
+        if dist != 0:
+            force_value = 1/dist * FORCE_MULTIPLIER
+        else:
+            force_value = 100
 
         r_force = Vector2D(force_value * x_direc, force_value * y_direc)
 

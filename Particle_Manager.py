@@ -33,11 +33,11 @@ class Particle_Manager():
 
                 if i < len(self.particles):
                     if vertical_spawn:
-                        self.particles[i].x = (buffer + radius) * x
-                        self.particles[i].y = (buffer + radius) * y
+                        self.particles[i].pos.x = (buffer + radius) * x
+                        self.particles[i].pos.y = (buffer + radius) * y
                     else:
-                        self.particles[i].x = (buffer + radius) * y
-                        self.particles[i].y = (buffer + radius) * x
+                        self.particles[i].pos.x = (buffer + radius) * y
+                        self.particles[i].pos.y = (buffer + radius) * x
                 else:
                     continue
 
