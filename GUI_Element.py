@@ -1,12 +1,14 @@
 
 class GUI_Element():
-    def __init__(self, x=0, y=0, width=100, height=100, color=(255, 0, 0)):
+    def __init__(self, x=0, y=0, width=100, height=100, color=(255, 0, 0), function_str=''):
         self.x, self.y = x, y
         self.parent_x, self.parent_y = 0, 0
 
         self.width, self.height = width, height
 
         self.color = color
+
+        self.func_str = function_str
 
         self.clicked = False
 
@@ -21,6 +23,9 @@ class GUI_Element():
         if self.clicked != value:
             self.clicked = value
             print(f'Set Clicked to {value}')
+
+    def get_clicked(self):
+        return False
 
     def set_parent_x(self, value):
         self.parent_x = value
