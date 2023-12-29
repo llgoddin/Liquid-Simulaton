@@ -128,6 +128,19 @@ class Particle_Manager():
 
         pygame.draw.line(screen, (255, 0, 0), (RENDER_X, RENDER_Y), (RENDER_X + line_x, RENDER_Y - line_y), 2)
 
+    def calculate_repulse(self):
+        influence_radius = self.particles[0].influence_radius
+        num_x = math.ceil(self.X_BOUND*2/(influence_radius * 2))
+        num_y = math.ceil(self.Y_BOUND*2/(influence_radius * 2))
+
+        spacial_matrix = [[[] for _ in range(num_x)] for _ in range(num_y)]
+        for p in self.particles:
+            x_sector = math.ceil(p.pos.x/(p.influence_radius * 2))
+            y_sector = math.ceil(p.pos.y/(p.influence_radius * 2))
+
+            
+            
+
     def update(self, screen, dt):
         # Calculate
         for i in range(len(self.particles)):
