@@ -111,7 +111,7 @@ class Particle():
         return r_force
 
     def force_towards_mouse(self, pos, negative=False):
-        MOUSE_FORCE = 1000
+        MOUSE_FORCE = 10
 
         mouse_pos = Vector2D(pos[0], pos[1])
         my_pos = Vector2D(self.pos.x, self.pos.y)
