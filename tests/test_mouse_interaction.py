@@ -93,8 +93,9 @@ class MouseInteractionTests(unittest.TestCase):
         import os
         os.environ.setdefault('SDL_VIDEODRIVER', 'dummy')
         os.environ.setdefault('SDL_AUDIODRIVER', 'dummy')
-        import pygame
         from unittest.mock import patch
+
+        import pygame
         manager = Particle_Manager(0, 0, 1, 1, 1000, 1000, False, False, True)
         manager.mouse_radius = 123
         surface = pygame.Surface((800, 600))

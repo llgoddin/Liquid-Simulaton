@@ -1,7 +1,9 @@
-from New_Vector2D import Vector2D
 import math
 
-class Particle():
+from New_Vector2D import Vector2D
+
+
+class Particle:
     def __init__(self, x, y, radius):
         self.MAX_X = None
         self.MIN_X = None
@@ -80,7 +82,6 @@ class Particle():
             self.pos.x = self.MIN_X
 
     def repulsion_force(self, object2):
-        MAX_FORCE = 50
         FORCE_MULTIPLIER = 100
 
         dist = self.get_distance(object2)
@@ -119,7 +120,7 @@ class Particle():
             return
         magnitude = strength * (1 - dist / radius) ** 2
         force = Vector2D(magnitude * x_dist / dist, magnitude * y_dist / dist)
-        
+
         if negative:
             force = -force
 
@@ -136,5 +137,5 @@ class Particle():
 
 
 
-    
-        
+
+

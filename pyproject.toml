@@ -1,0 +1,53 @@
+# Ruff is the linter for this repository.
+#
+# Why ruff rather than pycodestyle: ruff implements pycodestyle's PEP 8 rules
+# (`E`/`W`) identically, so the style half is unchanged -- but it also bundles
+# pyflakes (`F`), which catches the classes that actually ship defects here:
+# unused imports, an unused local, a method defined twice, and a dictionary
+# literal with a repeated key. pycodestyle cannot see any of those. One binary
+# and one config block, instead of pycodestyle + pyflakes + isort.
+#
+# `line-length = 88` is ruff's default and the modern reading of PEP 8. It is
+# the intended target for the tree; `E501` is not yet enforced (see the ignore
+# list below), because a handful of files still carry lines well past the limit
+# and wrapping them is a formatting pass of its own rather than a lint fix.
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+# The developer's virtualenv lives inside the working tree.
+extend-exclude = [".env"]
+
+[tool.ruff.lint]
+# The rule set is deliberately narrow. It is the set this repository is clean
+# against today, so the CI gate is meaningful from its first run. Widening it is
+# a decision to make on its own, with the fixes to match.
+select = [
+    "E",       # pycodestyle errors (PEP 8)
+    "W",       # pycodestyle warnings
+    "F",       # pyflakes: unused imports/variables, undefined names
+    "I",       # isort: import ordering
+    "B",       # flake8-bugbear: mutable default args, unused loop variables
+    "UP",      # pyupgrade
+    "BLE",     # flake8-blind-except
+    "SIM201",  # flake8-simplify: `not x == y` -> `x != y`
+    "SIM118",  # flake8-simplify: `key in dict.keys()` -> `key in dict`
+    "PLR1730", # an `if` that is really a `max`/`min`
+    "PLW1510", # subprocess.run without an explicit `check`
+    "RUF012",  # mutable class attribute needs a ClassVar annotation
+]
+ignore = [
+    # The tree predates the 88-column limit: Graphics.py still carries a
+    # 224-column line and about sixty lines sit past the limit in total.
+    # Conforming the tree is a formatting pass, not a lint fix, and it is a
+    # separate change from turning the gate on; it is out of scope here, not
+    # forgotten. Remove this ignore once the tree conforms.
+    "E501",
+]
+
+# Deliberately not enabled, so a future reader does not re-litigate them:
+#  * PLR2004 (magic values) -- `120`, `8` and `0.99` are the domain, not noise.
+#  * PLR0911/0912/0913/0915 (complexity) -- thresholds that ask for refactors.
+#  * RET5xx (return restructure), PERF4xx (comprehension rewrites), SIM108
+#    (ternary preference) -- style opinions, not defects, each a wider diff
+#    than the finding is worth.
