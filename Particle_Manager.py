@@ -17,6 +17,9 @@ class Particle_Manager():
     def __init__(self, x, y, num_particles, radius, x_bounds, y_bounds, gravity, repulse, vertical_spawn):
         self.GRAVITY = gravity
         self.REPULSE = repulse
+        self.mouse_radius = 150.0
+        self.mouse_strength = 10.0
+        self.mouse_pos = None
         self.accumulator = 0.0
         self.dropped_time = 0.0
         self.pending_controls = deque()
@@ -161,9 +164,10 @@ class Particle_Manager():
 
     def apply_mouse_force(self, pos, negative=False, weight=1.0):
         local_pos = (-(self.x - pos[0]), self.y - pos[1])
+        self.mouse_pos = local_pos
 
         for particle in self.particles:
-            particle.force_towards_mouse(local_pos, negative, weight)
+            particle.force_towards_mouse(local_pos, negative, weight, self.mouse_radius, self.mouse_strength)
 
     # Render Methods
     def render_bounds(self, screen):
@@ -272,6 +276,15 @@ class Particle_Manager():
             particle.move(dt)
             self.resolve_obstacle(particle, previous_pos)
 
+    def render_mouse_influence(self, screen):
+        if self.mouse_pos is None or self.mouse_radius <= 0 or math.isinf(self.mouse_radius):
+            return
+
+        RENDER_X = self.mouse_pos[0] + self.x
+        RENDER_Y = -self.mouse_pos[1] + self.y
+
+        pygame.draw.circle(screen, (120, 120, 255), (int(RENDER_X), int(RENDER_Y)), int(self.mouse_radius), 1)
+
     def render(self, screen):
         # Render Layer 1
         for particle in self.particles:
@@ -288,6 +301,9 @@ class Particle_Manager():
         # Render Layer 3
         for particle in self.particles:
             self.render_particle(screen, particle)
+
+        # Render influence ring at the cursor so the radius is visible.
+        self.render_mouse_influence(screen)
 
     # Getters    
     def get_gravity(self):
