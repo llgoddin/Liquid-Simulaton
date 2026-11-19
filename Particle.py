@@ -35,11 +35,12 @@ class Particle():
         if verbose:
             print(self)
 
-        self.velocity = self.velocity + self.acceleration
+        # Existing forces are calibrated as velocity increments at 120 Hz.
+        self.velocity = self.velocity + self.acceleration * (dt * 120)
 
         self.pos = self.pos + self.velocity * dt
 
-        self.velocity = self.velocity * self.velocity_decay
+        self.velocity = self.velocity * self.velocity_decay ** (dt * 120)
 
         self.check_bounds()
 
@@ -110,7 +111,7 @@ class Particle():
 
         return r_force
 
-    def force_towards_mouse(self, pos, negative=False):
+    def force_towards_mouse(self, pos, negative=False, weight=1.0):
         MOUSE_FORCE = 10
 
         mouse_pos = Vector2D(pos[0], pos[1])
@@ -134,7 +135,7 @@ class Particle():
         if negative:
             force = -force
 
-        self.apply_force(force)
+        self.apply_force(force * weight)
 
     def get_distance(self, object2):
         x = self.pos.x - object2.pos.x
