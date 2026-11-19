@@ -8,6 +8,9 @@ class FixedStepTests(unittest.TestCase):
     def test_near_boundary_stall_never_exceeds_step_cap(self):
         from Particle_Manager import Particle_Manager, FIXED_DT, MAX_SUBSTEPS
         manager = Particle_Manager(0, 0, 1, 1, 10000, 10000, False, False, True)
+        # Pin the velocity-weighted (distance-independent) force so this
+        # timestep test does not depend on the radial falloff profile.
+        manager.mouse_radius = float('inf')
         particle = manager.particles[0]
         particle.velocity_decay = 1
         before = FIXED_DT - 1.000002e-12
@@ -131,6 +134,7 @@ class FixedStepTests(unittest.TestCase):
         managers = []
         def make_manager(**kwargs):
             manager = Particle_Manager(0, 0, 1, 1, 10000, 10000, False, False, True)
+            manager.mouse_radius = float('inf')
             managers.append(manager)
             return manager
 
@@ -156,6 +160,7 @@ class FixedStepTests(unittest.TestCase):
     def test_fractional_backlog_survives_capped_stall(self):
         from Particle_Manager import Particle_Manager, FIXED_DT, MAX_SUBSTEPS
         manager = Particle_Manager(0, 0, 1, 1, 10000, 10000, False, False, True)
+        manager.mouse_radius = float('inf')
         particle = manager.particles[0]
         particle.velocity_decay = 1
         self.assertEqual(manager.advance(FIXED_DT / 2, [((100, 0), False)]), 0)
@@ -179,6 +184,7 @@ class FixedStepTests(unittest.TestCase):
         results = []
         for fps in (30, 60, 120, 240):
             manager = Particle_Manager(0, 0, 1, 1, 10000, 10000, False, False, True)
+            manager.mouse_radius = float('inf')
             for _ in range(fps):
                 manager.advance(1 / fps, [((10000, 0), False)])
             results.append((manager.particles[0].pos.x, manager.particles[0].velocity.x))

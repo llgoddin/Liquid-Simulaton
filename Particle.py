@@ -111,26 +111,14 @@ class Particle():
 
         return r_force
 
-    def force_towards_mouse(self, pos, negative=False, weight=1.0):
-        MOUSE_FORCE = 10
-
-        mouse_pos = Vector2D(pos[0], pos[1])
-        my_pos = Vector2D(self.pos.x, self.pos.y)
-
-        x_dist = self.pos.x - pos[0]
-        y_dist = self.pos.y - pos[1]
-
-        if y_dist != 0:
-            y_direc = y_dist/abs(y_dist)
-        else:
-            y_direc = 0
-
-        if x_dist != 0:
-            x_direc = x_dist/abs(x_dist)
-        else:
-            x_direc = 0
-
-        force = -Vector2D(MOUSE_FORCE * x_direc, MOUSE_FORCE * y_direc)
+    def force_towards_mouse(self, pos, negative=False, weight=1.0, radius=150, strength=10):
+        x_dist = pos[0] - self.pos.x
+        y_dist = pos[1] - self.pos.y
+        dist = math.hypot(x_dist, y_dist)
+        if dist == 0 or radius <= 0 or dist >= radius:
+            return
+        magnitude = strength * (1 - dist / radius) ** 2
+        force = Vector2D(magnitude * x_dist / dist, magnitude * y_dist / dist)
         
         if negative:
             force = -force
