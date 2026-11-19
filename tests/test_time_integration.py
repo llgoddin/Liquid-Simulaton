@@ -6,8 +6,11 @@ from Particle import Particle
 
 class FixedStepTests(unittest.TestCase):
     def test_near_boundary_stall_never_exceeds_step_cap(self):
-        from Particle_Manager import Particle_Manager, FIXED_DT, MAX_SUBSTEPS
+        from Particle_Manager import FIXED_DT, MAX_SUBSTEPS, Particle_Manager
         manager = Particle_Manager(0, 0, 1, 1, 10000, 10000, False, False, True)
+        # Pin the velocity-weighted (distance-independent) force so this
+        # timestep test does not depend on the radial falloff profile.
+        manager.mouse_radius = float('inf')
         particle = manager.particles[0]
         particle.velocity_decay = 1
         before = FIXED_DT - 1.000002e-12
@@ -24,7 +27,7 @@ class FixedStepTests(unittest.TestCase):
         self.assertEqual(applied, ['once'])
 
     def test_control_queue_is_bounded_fifo_and_drains_at_boundary(self):
-        from Particle_Manager import Particle_Manager, FIXED_DT, MAX_PENDING_CONTROLS
+        from Particle_Manager import FIXED_DT, MAX_PENDING_CONTROLS, Particle_Manager
         manager = Particle_Manager(0, 0, 1, 1, 100, 100, False, False, True)
         observed = []
         manager.advance(FIXED_DT / 2)
@@ -39,31 +42,38 @@ class FixedStepTests(unittest.TestCase):
         self.assertTrue(manager.queue_control(lambda: observed.append('immediate')))
         self.assertEqual(observed[-1], 'immediate')
 
+    @staticmethod
+    def recording_step(snapshots, manager):
+        original_step = manager.step
+        def record_step(dt):
+            snapshots.append((manager.GRAVITY, manager.num_particles, manager.X_BOUND))
+            original_step(dt)
+        return record_step
+
     def test_dashboard_changes_wait_for_fractional_step_boundary(self):
         import os
         import runpy
         from unittest.mock import patch
+
         import pygame
+
         from Particle_Manager import Particle_Manager
 
         class Clock:
             def tick(self, fps): pass
             def get_fps(self): return 240
 
+        snapshots = []
         for position, old, new in [
             ((620, 110), (True, 1, 100), (False, 1, 100)),
             ((620, 210), (True, 1, 100), (True, 2, 100)),
             ((620, 310), (True, 1, 100), (True, 1, 101)),
         ]:
             with self.subTest(position=position):
-                snapshots = []
+                snapshots.clear()
                 def make_manager(**kwargs):
                     manager = Particle_Manager(0, 0, 1, 1, 100, 100, True, False, True)
-                    original_step = manager.step
-                    def record_step(dt):
-                        snapshots.append((manager.GRAVITY, manager.num_particles, manager.X_BOUND))
-                        original_step(dt)
-                    manager.step = record_step
+                    manager.step = self.recording_step(snapshots, manager)
                     return manager
                 frames = [[], [pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1)],
                           [pygame.event.Event(pygame.MOUSEBUTTONUP, button=1)],
@@ -81,27 +91,26 @@ class FixedStepTests(unittest.TestCase):
         import os
         import runpy
         from unittest.mock import patch
+
         import pygame
+
         from Particle_Manager import Particle_Manager
 
         class Clock:
             def tick(self, fps): pass
             def get_fps(self): return 120
 
+        snapshots = []
         for position, old, new in [
             ((620, 110), (True, 1, 100), (False, 1, 100)),
             ((620, 210), (True, 1, 100), (True, 2, 100)),
             ((620, 310), (True, 1, 100), (True, 1, 101)),
         ]:
             with self.subTest(position=position):
-                snapshots = []
+                snapshots.clear()
                 def make_manager(**kwargs):
                     manager = Particle_Manager(0, 0, 1, 1, 100, 100, True, False, True)
-                    step = manager.step
-                    def record_step(dt):
-                        snapshots.append((manager.GRAVITY, manager.num_particles, manager.X_BOUND))
-                        step(dt)
-                    manager.step = record_step
+                    manager.step = self.recording_step(snapshots, manager)
                     return manager
                 frames = [[], [pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1)],
                           [pygame.event.Event(pygame.MOUSEBUTTONUP, button=1)],
@@ -119,7 +128,9 @@ class FixedStepTests(unittest.TestCase):
         import os
         import runpy
         from unittest.mock import patch
+
         import pygame
+
         from Particle_Manager import Particle_Manager
 
         class Clock:
@@ -131,6 +142,7 @@ class FixedStepTests(unittest.TestCase):
         managers = []
         def make_manager(**kwargs):
             manager = Particle_Manager(0, 0, 1, 1, 10000, 10000, False, False, True)
+            manager.mouse_radius = float('inf')
             managers.append(manager)
             return manager
 
@@ -154,8 +166,9 @@ class FixedStepTests(unittest.TestCase):
         self.assertAlmostEqual(velocity, 5 * .99)
 
     def test_fractional_backlog_survives_capped_stall(self):
-        from Particle_Manager import Particle_Manager, FIXED_DT, MAX_SUBSTEPS
+        from Particle_Manager import FIXED_DT, MAX_SUBSTEPS, Particle_Manager
         manager = Particle_Manager(0, 0, 1, 1, 10000, 10000, False, False, True)
+        manager.mouse_radius = float('inf')
         particle = manager.particles[0]
         particle.velocity_decay = 1
         self.assertEqual(manager.advance(FIXED_DT / 2, [((100, 0), False)]), 0)
@@ -168,7 +181,7 @@ class FixedStepTests(unittest.TestCase):
         self.assertAlmostEqual(manager.accumulator, 0)
 
     def test_stall_is_capped_and_dropped_time_recorded(self):
-        from Particle_Manager import Particle_Manager, FIXED_DT, MAX_SUBSTEPS
+        from Particle_Manager import FIXED_DT, MAX_SUBSTEPS, Particle_Manager
         manager = Particle_Manager(0, 0, 1, 1, 10000, 10000, True, False, True)
         self.assertEqual(manager.advance(1), MAX_SUBSTEPS)
         self.assertAlmostEqual(manager.dropped_time, 1 - MAX_SUBSTEPS * FIXED_DT)
@@ -179,6 +192,7 @@ class FixedStepTests(unittest.TestCase):
         results = []
         for fps in (30, 60, 120, 240):
             manager = Particle_Manager(0, 0, 1, 1, 10000, 10000, False, False, True)
+            manager.mouse_radius = float('inf')
             for _ in range(fps):
                 manager.advance(1 / fps, [((10000, 0), False)])
             results.append((manager.particles[0].pos.x, manager.particles[0].velocity.x))

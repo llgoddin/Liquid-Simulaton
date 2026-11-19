@@ -23,6 +23,9 @@ from Particle_Manager import Particle_Manager  # noqa: E402
 
 INFLUENCE_COLOR = (240, 220, 220)
 BOUNDS_COLOR = (40, 170, 40)
+OBSTACLE_FILL = (110, 110, 110)
+OBSTACLE_EDGE = (40, 40, 40)
+RING_COLOR = (120, 120, 255)
 
 
 class DebugOverlayRenderTests(unittest.TestCase):
@@ -72,6 +75,23 @@ class DebugOverlayRenderTests(unittest.TestCase):
         self.assertEqual(len(rects), 1)
         self.assertEqual(rects[0][1], BOUNDS_COLOR)
 
+    def test_obstacle_and_mouse_ring_are_not_diagnostics(self):
+        # The obstacle and the mouse influence ring are part of the simulation,
+        # so the default view still draws them. Only the container rectangle,
+        # the influence disc and the velocity line are diagnostics.
+        manager = Particle_Manager(0, 0, 3, 5, 100, 100, False, False, True)
+        manager.set_obstacle(0, 0, 30)
+        manager.mouse_pos = (0.0, 0.0)
+        manager.mouse_radius = 50.0
+        circles, lines, rects = self._capture(manager)
+        colours = [call[1] for call in circles]
+        self.assertIn(OBSTACLE_FILL, colours)
+        self.assertIn(OBSTACLE_EDGE, colours)
+        self.assertIn(RING_COLOR, colours)
+        # The default view still carries no diagnostics.
+        self.assertEqual(lines, [])
+        self.assertEqual(rects, [])
+
 
 class DebugToggleIntegrationTests(unittest.TestCase):
     """The keyboard toggle sits on the main (fixed-step) loop."""
@@ -79,6 +99,7 @@ class DebugToggleIntegrationTests(unittest.TestCase):
     def _run_frames(self, frames, key):
         import runpy
         from unittest.mock import patch
+
         from Particle_Manager import Particle_Manager
 
         class Clock:

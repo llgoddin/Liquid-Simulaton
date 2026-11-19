@@ -1,22 +1,12 @@
-import pygame
 import time
-import math
-from New_Vector2D import Vector2D
-from Particle import Particle
-from Particle_Manager import Particle_Manager
+
+import pygame
+
 from Button import Button
 from Dashboard import Dashboard
+from Particle_Manager import Particle_Manager
 from Text_Label import Text_Label
 
-colors = {
-    'red': (255, 0, 0),
-    'green': (0, 255, 0),
-    'blue': (0, 0, 255),
-    'blue': (0, 0, 0),
-    'blue': (0, 0, 0),
-    'blue': (0, 0, 0),
-    'blue': (0, 0, 0),
-}
 
 def update_container_settings(p_manager, dash, fps):
     def enqueue(action):
@@ -130,6 +120,11 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Liquid Simulator")
 liquid = Particle_Manager(x=(SCREEN_WIDTH/2 - 100), y=SCREEN_HEIGHT/2, num_particles=NUM_PARTICLES, radius=5, x_bounds=CONTAINER[0]/2, y_bounds=CONTAINER[1]/2, gravity=GRAVITY, repulse=REPULSE, vertical_spawn=VERTICAL_SPAWN)
 
+# Static circular obstacle at the centre of the container. Its radius is scaled
+# to the container so it is always visible and always fits inside the bounds.
+OBSTACLE_RADIUS = min(CONTAINER[0], CONTAINER[1]) / 2 * 0.3
+liquid.set_obstacle(0, 0, OBSTACLE_RADIUS)
+
 dash_tick = 0
 
 now = 0
@@ -165,7 +160,7 @@ while run:
         pos = pygame.mouse.get_pos()
         if not pos[0] > dash.x:
             mouse_forces.append((pos, False))
-    
+
     if mouse_right:
         pos = pygame.mouse.get_pos()
         if not pos[0] > dash.x:

@@ -1,5 +1,7 @@
-from GUI_Element import GUI_Element
 import pygame
+
+from GUI_Element import GUI_Element
+
 
 class Text_Label(GUI_Element):
     def __init__(self, x, y, width, height, color, text='Label 1', function_str='None'):
@@ -8,8 +10,13 @@ class Text_Label(GUI_Element):
         self.text = text
 
     def render(self, screen):
-        my_font = pygame.font.Font('freesansbold.ttf', 15)
-        my_text = my_font.render(f'{self.text}', True, (255, 255, 255))
+        if not hasattr(self, '_text_font'):
+            self._text_font = pygame.font.Font('freesansbold.ttf', 15)
+        text = f'{self.text}'
+        if getattr(self, '_rendered_text', None) != text:
+            self._text_surface = self._text_font.render(text, True, (255, 255, 255))
+            self._rendered_text = text
+        my_text = self._text_surface
 
         text_rect = my_text.get_rect()
 
@@ -21,5 +28,5 @@ class Text_Label(GUI_Element):
 
     def get_clicked(self):
         return True
-    
+
 
