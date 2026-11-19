@@ -1,22 +1,12 @@
-import pygame
 import time
-import math
-from New_Vector2D import Vector2D
-from Particle import Particle
-from Particle_Manager import Particle_Manager
+
+import pygame
+
 from Button import Button
 from Dashboard import Dashboard
+from Particle_Manager import Particle_Manager
 from Text_Label import Text_Label
 
-colors = {
-    'red': (255, 0, 0),
-    'green': (0, 255, 0),
-    'blue': (0, 0, 255),
-    'blue': (0, 0, 0),
-    'blue': (0, 0, 0),
-    'blue': (0, 0, 0),
-    'blue': (0, 0, 0),
-}
 
 def update_container_settings(p_manager, dash, fps):
     def enqueue(action):
@@ -165,7 +155,7 @@ while run:
         pos = pygame.mouse.get_pos()
         if not pos[0] > dash.x:
             mouse_forces.append((pos, False))
-    
+
     if mouse_right:
         pos = pygame.mouse.get_pos()
         if not pos[0] > dash.x:

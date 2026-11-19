@@ -1,5 +1,7 @@
 import pygame
+
 from GUI_Element import GUI_Element
+
 
 class Dashboard(GUI_Element):
     def __init__(self, x, y, width, height):

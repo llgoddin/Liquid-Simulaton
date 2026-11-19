@@ -1,7 +1,11 @@
-from Particle import Particle
-from New_Vector2D import Vector2D
-import math, pygame, random
+import math
+import random
 from collections import deque
+
+import pygame
+
+from New_Vector2D import Vector2D
+from Particle import Particle
 
 FIXED_DT = 1 / 120
 MAX_SUBSTEPS = 8
@@ -12,7 +16,7 @@ MAX_PENDING_CONTROLS = 256
 # particle sitting on the obstacle does not jitter. Genuine impacts exceed it.
 REST_SPEED = 10.0
 
-class Particle_Manager():
+class Particle_Manager:
 
     def __init__(self, x, y, num_particles, radius, x_bounds, y_bounds, gravity, repulse, vertical_spawn):
         self.GRAVITY = gravity
@@ -60,7 +64,7 @@ class Particle_Manager():
                     continue
 
                 i += 1
-    
+
     # Update methods
     def set_obstacle(self, x, y, radius):
         self.obstacle = (x, y, radius)
@@ -125,7 +129,7 @@ class Particle_Manager():
 
         new_particle.bind_x(self.X_BOUND, -self.X_BOUND)
         new_particle.bind_y(self.Y_BOUND, -self.Y_BOUND)
-        
+
         self.particles.append(new_particle)
         self.num_particles += 1
 
@@ -153,11 +157,11 @@ class Particle_Manager():
         for particle in self.particles:
             particle.bind_x(x_bound, -x_bound)
             particle.bind_y(y_bound, -y_bound)
-    
+
     def update_coordinate_grid(self, screen):
         # X_OFFSET = screen.get_width()/2
         # Y_OFFSET = -screen.get_height()/2
-        
+
         # RENDER_X = particle.pos.x + X_OFFSET
         # RENDER_Y = screen.get_height() - particle.pos.y + Y_OFFSET
         return 0
@@ -199,7 +203,7 @@ class Particle_Manager():
 
         influence_color = (240, 220, 220)
         pygame.draw.circle(screen, influence_color, (RENDER_X, RENDER_Y), particle.influence_radius)
-        
+
     def render_particle_velocity(self, screen, particle):
         RENDER_X = particle.pos.x + self.x
         RENDER_Y = -particle.pos.y + self.y
@@ -305,20 +309,19 @@ class Particle_Manager():
         # Render influence ring at the cursor so the radius is visible.
         self.render_mouse_influence(screen)
 
-    # Getters    
+    # Getters
     def get_gravity(self):
         return self.GRAVITY
 
     def get_repulse(self):
         return self.REPULSE
-    
+
 
     # Setters
     def set_gravity(self, value=False):
-        if value == True or value == False:
+        if isinstance(value, bool):
             self.GRAVITY = value
 
     def set_repulse(self, value=False):
-        if value == True or value == False:
+        if isinstance(value, bool):
             self.REPULSE = value
-    

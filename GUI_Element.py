@@ -1,5 +1,5 @@
 
-class GUI_Element():
+class GUI_Element:
     def __init__(self, x=0, y=0, width=100, height=100, color=(255, 0, 0), function_str=''):
         self.x, self.y = x, y
         self.parent_x, self.parent_y = 0, 0
@@ -16,9 +16,9 @@ class GUI_Element():
         if pos[0] - (self.parent_x + self.x) < self.width and pos[0] - (self.parent_x + self.x) >= 0:
             if pos[1] - (self.parent_y + self.y) < self.height and pos[1] - (self.parent_y + self.y) >= 0:
                 return True
-        
+
         return False
-    
+
     def set_clicked(self, value):
         if self.clicked != value:
             self.clicked = value

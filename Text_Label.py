@@ -1,5 +1,7 @@
-from GUI_Element import GUI_Element
 import pygame
+
+from GUI_Element import GUI_Element
+
 
 class Text_Label(GUI_Element):
     def __init__(self, x, y, width, height, color, text='Label 1', function_str='None'):
@@ -26,5 +28,5 @@ class Text_Label(GUI_Element):
 
     def get_clicked(self):
         return True
-    
+
 
