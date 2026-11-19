@@ -1,0 +1,62 @@
+name: tests
+
+# Every pull request, whatever it targets, plus pushes to `main`.
+#
+# Two gates run here: `lint` (ruff -- see pyproject.toml for the rule set and for
+# why ruff rather than pycodestyle) and `unittest` (the suite). Both must be green
+# before review is requested.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    # Ruff is pinned so the gate cannot move under the repository on its own: a
+    # later ruff release that enables a rule would otherwise turn a green branch
+    # red with no change of ours. Bumping it is a deliberate commit.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install the pinned linter
+        run: pip install ruff==0.17.5
+
+      - name: Lint
+        run: ruff check .
+
+  unittest:
+    # The runner is pinned, not just the Python line: `ubuntu-latest` moves, and
+    # the point of this job is an environment that does not drift under us.
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        # One entry on purpose. `requirements.txt` is pinned to the versions
+        # verified on 3.12, which is what the project runs on, and testing an
+        # interpreter the project does not run on would be a guess dressed up as
+        # coverage. Widening the set is a one-line change once a version is
+        # verified, not a guess to be discovered red here.
+        python-version: ['3.12']
+    env:
+      # The suite draws into surfaces rather than a window, so SDL's dummy
+      # drivers let it run on a headless runner.
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install the pinned dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run the test suite
+        run: python -m unittest discover -s tests -v
