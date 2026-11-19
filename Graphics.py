@@ -19,33 +19,37 @@ colors = {
 }
 
 def update_container_settings(p_manager, dash, fps):
+    def enqueue(action):
+        if not p_manager.queue_control(action):
+            print('Dashboard control rejected: pending control queue is full')
+
     for element in dash.get_elements():
         if element.get_clicked():
             match element.func_str:
                 case 'Gravity':
-                    p_manager.set_gravity(element.active)
+                    enqueue(lambda active=element.active: p_manager.set_gravity(active))
 
                 case 'Repulse':
-                    p_manager.set_repulse(element.active)
+                    enqueue(lambda active=element.active: p_manager.set_repulse(active))
 
                 case '+ Particle':
-                    p_manager.spawn_particle()
+                    enqueue(p_manager.spawn_particle)
 
                 case '- Particle':
-                    p_manager.delete_particle()
+                    enqueue(p_manager.delete_particle)
 
                 #TO DO - IMPLEMENT
                 case '+ Container Width':
-                    p_manager.increase_container_width()
+                    enqueue(p_manager.increase_container_width)
 
                 case '- Container Width':
-                    p_manager.decrease_container_width()
+                    enqueue(p_manager.decrease_container_width)
 
                 case '+ Container Height':
-                    p_manager.increase_container_height()
+                    enqueue(p_manager.increase_container_height)
 
                 case '- Container Height':
-                    p_manager.decrease_container_height()
+                    enqueue(p_manager.decrease_container_height)
 
                 case '+ Repulse Force':
                     #p_manager.increase_repulse()
@@ -138,7 +142,7 @@ while run:
 
     dash_tick += 1
 
-    now = time.time()
+    now = time.monotonic()
 
     if not prev_time:
         prev_time = now
@@ -150,15 +154,20 @@ while run:
 
     screen.fill((230, 230, 230))
 
+    # The pre-event button state describes the interval that just elapsed.
+    mouse_forces = []
     if mouse_left:
         pos = pygame.mouse.get_pos()
         if not pos[0] > dash.x:
-            liquid.apply_mouse_force(pos)
+            mouse_forces.append((pos, False))
     
     if mouse_right:
         pos = pygame.mouse.get_pos()
         if not pos[0] > dash.x:
-            liquid.apply_mouse_force(pos, True)
+            mouse_forces.append((pos, True))
+
+    # Consume the elapsed interval before applying newly received controls.
+    liquid.advance(dt, mouse_forces)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -187,7 +196,7 @@ while run:
 
     update_container_settings(liquid, dash, int(CLOCK.get_fps()))
 
-    liquid.update(screen=screen, dt=dt)
+    liquid.render(screen=screen)
 
     dash.render(screen=screen)
 

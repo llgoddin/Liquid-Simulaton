@@ -1,12 +1,21 @@
 from Particle import Particle
 from New_Vector2D import Vector2D
 import math, pygame, random
+from collections import deque
+
+FIXED_DT = 1 / 120
+MAX_SUBSTEPS = 8
+MAX_PENDING_CONTROLS = 256
 
 class Particle_Manager():
 
     def __init__(self, x, y, num_particles, radius, x_bounds, y_bounds, gravity, repulse, vertical_spawn):
         self.GRAVITY = gravity
         self.REPULSE = repulse
+        self.accumulator = 0.0
+        self.dropped_time = 0.0
+        self.pending_controls = deque()
+        self.rejected_controls = 0
 
         self.particles = []
         self.num_particles = num_particles
@@ -87,11 +96,11 @@ class Particle_Manager():
         # RENDER_Y = screen.get_height() - particle.pos.y + Y_OFFSET
         return 0
 
-    def apply_mouse_force(self, pos, negative=False):
+    def apply_mouse_force(self, pos, negative=False, weight=1.0):
         local_pos = (-(self.x - pos[0]), self.y - pos[1])
 
         for particle in self.particles:
-            particle.force_towards_mouse(local_pos, negative)
+            particle.force_towards_mouse(local_pos, negative, weight)
 
     # Render Methods
     def render_bounds(self, screen):
@@ -128,7 +137,46 @@ class Particle_Manager():
 
         pygame.draw.line(screen, (255, 0, 0), (RENDER_X, RENDER_Y), (RENDER_X + line_x, RENDER_Y - line_y), 2)
 
-    def update(self, screen, dt):
+    def queue_control(self, action):
+        if not self.accumulator and not self.pending_controls:
+            action()
+            return True
+        if len(self.pending_controls) >= MAX_PENDING_CONTROLS:
+            self.rejected_controls += 1
+            return False
+        self.pending_controls.append(action)
+        return True
+
+    def advance(self, dt, mouse_forces=()):
+        # Discard excessive backlog rather than entering a spiral of death.
+        accepted = min(max(dt, 0), FIXED_DT * MAX_SUBSTEPS)
+        self.dropped_time += max(dt, 0) - accepted
+        steps = 0
+        # Store the time-weighted mouse contribution in each particle's net
+        # force until its next step; no event queue or growing buffer is needed.
+        remaining = accepted
+        while remaining > 0 or self.accumulator >= FIXED_DT:
+            if steps == MAX_SUBSTEPS:
+                # Keep the accepted remainder, including its mouse contribution,
+                # for the next call rather than performing a ninth step.
+                for pos, negative in mouse_forces:
+                    self.apply_mouse_force(pos, negative, remaining / FIXED_DT)
+                self.accumulator += remaining
+                break
+            part = min(remaining, max(0.0, FIXED_DT - self.accumulator))
+            for pos, negative in mouse_forces:
+                self.apply_mouse_force(pos, negative, part / FIXED_DT)
+            self.accumulator += part
+            remaining -= part
+            if self.accumulator + 1e-12 >= FIXED_DT:
+                self.step(FIXED_DT)
+                self.accumulator = 0.0
+                steps += 1
+                while self.pending_controls:
+                    self.pending_controls.popleft()()
+        return steps
+
+    def step(self, dt):
         # Calculate
         for i in range(len(self.particles)):
             if self.REPULSE:
@@ -148,6 +196,7 @@ class Particle_Manager():
         for particle in self.particles:
             particle.move(dt)
 
+    def render(self, screen):
         # Render Layer 1
         for particle in self.particles:
             self.render_bounds(screen)
