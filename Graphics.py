@@ -100,6 +100,11 @@ DASH_FPS = FPS / 10
 
 SLOW_TIME_BY = 1
 
+# Diagnostics (container rectangle, influence disc, velocity line) are opt-in:
+# the default view is the simulation. Press D to toggle the debug overlays.
+DEBUG_KEY = pygame.K_d
+debug_overlays = False
+
 NUM_PARTICLES = 2
 
 VERTICAL_SPAWN = True
@@ -168,6 +173,10 @@ while run:
         if event.type == pygame.QUIT:
             run = False
 
+        if event.type == pygame.KEYDOWN:
+            if event.key == DEBUG_KEY:
+                debug_overlays = not debug_overlays
+
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 mouse_left = True
@@ -191,7 +200,7 @@ while run:
 
     update_container_settings(liquid, dash, int(CLOCK.get_fps()))
 
-    liquid.render(screen=screen)
+    liquid.render(screen=screen, debug=debug_overlays)
 
     dash.render(screen=screen)
 

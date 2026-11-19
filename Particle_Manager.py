@@ -289,20 +289,29 @@ class Particle_Manager:
 
         pygame.draw.circle(screen, (120, 120, 255), (int(RENDER_X), int(RENDER_Y)), int(self.mouse_radius), 1)
 
-    def render(self, screen):
-        # Render Layer 1
-        for particle in self.particles:
+    def render(self, screen, debug=False):
+        # The default view is the simulation: the particles, the obstacle and the
+        # mouse influence ring. The diagnostics (container rectangle, influence
+        # disc, velocity line) sit behind the debug toggle so they are opt-in.
+        if debug:
+            # Bounds are a container outline, not a per-particle feature, so
+            # they are drawn once per frame rather than once per particle.
             self.render_bounds(screen)
-            self.render_particle_influence(screen, particle)
 
-        # The obstacle sits above the influence discs so it stays visible.
+            # Render Layer 1 (debug)
+            for particle in self.particles:
+                self.render_particle_influence(screen, particle)
+
+        # The obstacle is part of the simulation, not a diagnostic, so it is
+        # drawn by default. It sits above the influence discs so it stays visible.
         self.render_obstacle(screen)
 
-        # Render Layer 2
-        for particle in self.particles:
-            self.render_particle_velocity(screen, particle)
+        if debug:
+            # Render Layer 2 (debug)
+            for particle in self.particles:
+                self.render_particle_velocity(screen, particle)
 
-        # Render Layer 3
+        # Render Layer 3 — the simulation itself, always drawn.
         for particle in self.particles:
             self.render_particle(screen, particle)
 
