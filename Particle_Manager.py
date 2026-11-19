@@ -6,6 +6,11 @@ from collections import deque
 FIXED_DT = 1 / 120
 MAX_SUBSTEPS = 8
 MAX_PENDING_CONTROLS = 256
+# Per-step gravity impulse at the reference rate (|a| * FIXED_DT * 120 = 10).
+# A contact whose inward normal speed does not exceed this is treated as a
+# resting contact: the inward component is removed rather than reflected, so a
+# particle sitting on the obstacle does not jitter. Genuine impacts exceed it.
+REST_SPEED = 10.0
 
 class Particle_Manager():
 
@@ -16,6 +21,7 @@ class Particle_Manager():
         self.dropped_time = 0.0
         self.pending_controls = deque()
         self.rejected_controls = 0
+        self.obstacle = None
 
         self.particles = []
         self.num_particles = num_particles
@@ -53,6 +59,63 @@ class Particle_Manager():
                 i += 1
     
     # Update methods
+    def set_obstacle(self, x, y, radius):
+        self.obstacle = (x, y, radius)
+
+    def resolve_obstacle(self, particle, previous_pos):
+        if self.obstacle is None:
+            return
+        x, y, radius = self.obstacle
+        contact_radius = radius + particle.radius
+
+        # Swept test: find the first point along this step's motion where the
+        # particle surface reaches the obstacle surface, so a fast particle
+        # cannot pass through between two samples.
+        sx, sy = previous_pos.x - x, previous_pos.y - y
+        ex, ey = particle.pos.x - x, particle.pos.y - y
+        dx, dy = ex - sx, ey - sy
+        a = dx * dx + dy * dy
+        hit_t = None
+        if a > 0:
+            b = 2 * (sx * dx + sy * dy)
+            c = sx * sx + sy * sy - contact_radius * contact_radius
+            if c <= 0:
+                # Already touching or penetrating at the start of the step.
+                # Treat it as a contact unless the step carries the particle
+                # outward off the surface (c == 0 and moving away): a departing
+                # particle must not be re-pinned to the surface, or it can
+                # never separate after a bounce.
+                if b < 0 or c < 0:
+                    hit_t = 0.0
+            else:
+                discriminant = b * b - 4 * a * c
+                if discriminant >= 0:
+                    root = math.sqrt(discriminant)
+                    t = (-b - root) / (2 * a)
+                    if 0 <= t <= 1:
+                        hit_t = t
+        elif sx * sx + sy * sy < contact_radius * contact_radius:
+            hit_t = 0.0  # stationary inside the obstacle
+
+        if hit_t is None:
+            return
+
+        cx = sx + hit_t * dx
+        cy = sy + hit_t * dy
+        distance = math.hypot(cx, cy)
+        nx, ny = (cx / distance, cy / distance) if distance else (1, 0)
+        particle.pos = Vector2D(x + nx * contact_radius, y + ny * contact_radius)
+
+        normal_speed = particle.velocity.x * nx + particle.velocity.y * ny
+        if normal_speed < 0:
+            if -normal_speed > REST_SPEED:
+                normal_speed *= -particle.bounciness
+            else:
+                normal_speed = 0.0
+            tangent = particle.velocity.x * (-ny) + particle.velocity.y * nx
+            particle.velocity = Vector2D(normal_speed * nx - tangent * ny,
+                                         normal_speed * ny + tangent * nx)
+
     def spawn_particle(self):
 
         new_particle = Particle(random.randint(-5,5), random.randint(-5,5), self.particle_radius)
@@ -108,6 +171,17 @@ class Particle_Manager():
         RENDER_Y = -self.Y_BOUND + self.y
 
         pygame.draw.rect(screen, (40, 170, 40), pygame.Rect(RENDER_X, RENDER_Y, self.X_BOUND * 2, self.Y_BOUND * 2), 3)
+
+    def render_obstacle(self, screen):
+        if self.obstacle is None:
+            return
+        x, y, radius = self.obstacle
+
+        RENDER_X = x + self.x
+        RENDER_Y = -y + self.y
+
+        pygame.draw.circle(screen, (110, 110, 110), (RENDER_X, RENDER_Y), radius)
+        pygame.draw.circle(screen, (40, 40, 40), (RENDER_X, RENDER_Y), radius, 3)
 
     def render_particle(self, screen, particle):
         RENDER_X = particle.pos.x + self.x
@@ -194,13 +268,18 @@ class Particle_Manager():
 
         # Move
         for particle in self.particles:
+            previous_pos = Vector2D(particle.pos.x, particle.pos.y)
             particle.move(dt)
+            self.resolve_obstacle(particle, previous_pos)
 
     def render(self, screen):
         # Render Layer 1
         for particle in self.particles:
             self.render_bounds(screen)
             self.render_particle_influence(screen, particle)
+
+        # The obstacle sits above the influence discs so it stays visible.
+        self.render_obstacle(screen)
 
         # Render Layer 2
         for particle in self.particles:
