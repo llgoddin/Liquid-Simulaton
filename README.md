@@ -2,8 +2,7 @@
 
 Liquid-Simulaton is an experimental 2D particle-fluid simulation written in
 Python and pygame. It uses Smoothed Particle Hydrodynamics (SPH) for particle
-interactions. The project is under active development; Phase 1 is not complete
-and its performance acceptance criterion has not been met.
+interactions. The Python implementation does not reach the recorded 200-particle/30-fps target; Lucas has decided further performance optimization belongs to Phase 2's Rust rewrite. Phase 1 remains in progress pending physics qualification.
 
 ## Current features
 
@@ -79,7 +78,7 @@ as zero. These broad safety limits are not SPH calibration or stability criteria
 
 The latest full-app run used the optional experimental NumPy solver, 200 particles, a 30 Hz cap, and 300 warmup steps. Over 4.07 seconds it produced 82 frames: mean 48.54 ms, median 45.02 ms, p95 69.05 ms, and maximum 101.24 ms. It processed 467 physics steps (5.63 per frame) and dropped 0.0800 seconds of simulation time.
 
-The force, velocity and timestep guards did not activate in the timed run; the measured maximum speed was 6.39 px/s and density ranged from 0.01749 to 0.10762 against rest density 0.004444. The run missed the 33.33 ms budget. These measurements do not establish physical accuracy or stability. Phase 1 remains in progress; no performance success or phase completion is claimed.
+The force, velocity and timestep guards did not activate in the timed run; the measured maximum speed was 6.39 px/s and density ranged from 0.01749 to 0.10762 against rest density 0.004444. The run missed the 33.33 ms budget. Lucas has decided that further Python performance optimization belongs to Phase 2's Rust rewrite, so this gap is documented rather than optimized further in this phase. These measurements do not establish physical accuracy or stability. Phase 1 remains in progress pending physics qualification; no performance pass or phase completion is claimed.
 
 The NumPy solver remains experimental and is not a runtime dependency; `requirements.txt` is still pygame-only. An earlier 60 Hz full-app run also missed its 16.67 ms budget (median 29.82 ms, p95 45.93 ms). The pure-Python baseline was slower: 101.49 ms median frame time and 1.206 seconds dropped over about four seconds.
 
