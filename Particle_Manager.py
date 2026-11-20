@@ -17,7 +17,9 @@ MAX_PENDING_CONTROLS = 256
 MAX_FORCE = 50.0
 MAX_VELOCITY = 500.0
 MAX_DT = FIXED_DT
-# Per-step gravity impulse at the reference rate (|a| * FIXED_DT * 120 = 10).
+PHYSICAL_FORCE_TO_LEGACY = 120.0
+GRAVITY_ACCELERATION = 10.0
+# Per-step gravity was previously a 10-unit velocity impulse, not acceleration.
 # A contact whose inward normal speed does not exceed this is treated as a
 # resting contact: the inward component is removed rather than reflected, so a
 # particle sitting on the obstacle does not jitter. Genuine impacts exceed it.
@@ -284,17 +286,34 @@ class Particle_Manager:
             self.clamp_activations["dt"] += 1
         # Calculate all SPH terms from one immutable pre-move snapshot.
         if self.REPULSE:
+            boundary_particles = sph.mirror_boundary_particles(
+                self.particles,
+                x_bounds=(-self.X_BOUND, self.X_BOUND),
+                y_bounds=(-self.Y_BOUND, self.Y_BOUND),
+                obstacle=self.obstacle,
+                h=self.sph_h,
+            )
             self.densities, self.pressures, sph_forces = sph.solve(
                 self.particles, self.sph_h, self.sph_rest_density,
                 self.sph_stiffness, self.sph_viscosity,
+                boundary_particles=boundary_particles,
             )
-            # Particle.move's legacy force channel multiplies acceleration by
-            # 120; convert physical SPH forces so they remain SI-time scaled.
+            # SPH forces use physical units; convert through the same legacy
+            # 120 Hz channel used by Particle.move.
             for particle, (force_x, force_y) in zip(self.particles, sph_forces, strict=True):
-                particle.apply_force(Vector2D(force_x / 120, force_y / 120))
+                particle.apply_force(Vector2D(
+                    force_x / PHYSICAL_FORCE_TO_LEGACY,
+                    force_y / PHYSICAL_FORCE_TO_LEGACY,
+                ))
         if self.GRAVITY:
+            # Gravity is a physical acceleration (px/s^2), unlike the original
+            # per-step velocity impulse. Convert its force once for the legacy
+            # Particle.move integration channel.
             for particle in self.particles:
-                particle.apply_force(Vector2D(0, -10 * particle.mass))
+                particle.apply_force(Vector2D(
+                    0,
+                    -GRAVITY_ACCELERATION * particle.mass / PHYSICAL_FORCE_TO_LEGACY,
+                ))
         # Move
         for particle in self.particles:
             previous_pos = Vector2D(particle.pos.x, particle.pos.y)

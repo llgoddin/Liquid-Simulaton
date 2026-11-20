@@ -46,7 +46,7 @@ class ObstacleTests(unittest.TestCase):
         self.assertAlmostEqual(particle.velocity.y, 0)
 
     def test_high_speed_particle_cannot_tunnel_through(self):
-        manager = Particle_Manager(0, 0, 1, 2, 100, 100, False, False, True)
+        manager = Particle_Manager(0, 0, 1, 2, 100, 100, False, True, True)
         manager.set_obstacle(0, 0, 10)
         particle = manager.particles[0]
         particle.pos = Vector2D(0, -40)
