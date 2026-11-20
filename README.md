@@ -1,94 +1,93 @@
 # Liquid-Simulaton
 
-The goal of this project is to simulate liquids using a technique called Smoothed-Particle Hydrodynamics using python
+Liquid-Simulaton is an experimental 2D particle-fluid simulation written in
+Python and pygame. It uses Smoothed Particle Hydrodynamics (SPH) for particle
+interactions. The project is under active development; Phase 1 is not complete
+and its performance acceptance criterion has not been met.
 
-## Motivation
+## Current features
 
-I created this project to practice implimenting physics in code.
+- Fixed-step physics at 120 Hz, independent of render timing, with a maximum of
+eight substeps per frame. Excess elapsed time is dropped and accumulated in
+`Particle_Manager.dropped_time`.
+- SPH particle interaction, controlled by the existing **Repulse** dashboard
+toggle. The control retains its historical name; it enables the SPH solver.
+- Gravity and particle-count controls, plus adjustable container dimensions.
+- Radial mouse interaction: left and right mouse buttons apply opposite force
+directions; the influence radius is shown around the cursor.
+- A circular obstacle in the simulation container.
+- Optional diagnostic overlays, toggled with **D**: container bounds,
+per-particle influence discs and velocity lines. The particles, obstacle and
+mouse influence ring remain visible in the normal view.
+- Dashboard with particle count and FPS readouts.
+- `unittest` coverage and GitHub Actions CI for tests and linting.
 
-## Status
+## Requirements and setup
 
-Under Development
+Python 3.12 is the supported and CI-tested version. The sole runtime dependency
+is pygame, pinned in `requirements.txt`; NumPy is not a runtime dependency. Python
+and pygame are retained for this phase because they are the existing working
+application stack, and the scope is to add/test the fluid model without replacing
+the renderer or dashboard.
 
-## Features
-
-- Gravity
-- Particle Repulsion
-- Adjustable Container
-
-## Time integration
-
-Physics uses fixed 1/120-second semi-implicit steps, independent of rendering.
-The existing force values are calibrated as velocity increments per 120 Hz
-step: acceleration is multiplied by `dt * 120`, position by `dt` once, and
-velocity damping by `0.99 ** (dt * 120)`. At 120 Hz this retains the original
-update order and scale; these are not physical SI units.
-
-At most eight steps are processed per rendered frame. Elapsed simulation time
-above eight steps in a frame is discarded, and the cumulative discarded time
-in seconds is available as `Particle_Manager.dropped_time`. Sustained overload
-therefore slows simulation relative to wall time. Button transitions are sampled
-at frame boundaries: the previous held state describes the elapsed interval.
-Mouse force is weighted by the fraction of each physics step for which it was
-held, including across render frames, without queuing events. Cursor position is
-sampled once per frame; transitions within the same event batch have no duration
-and rapid motion is approximate. Discarded stall time contributes no input.
-Existing force and collision limitations are unchanged. Dashboard controls at a
-physics boundary apply immediately. Otherwise, the current step completes with
-its old settings and queued changes apply in order before the next step; buttons
-show the requested state immediately, so the physics can lag the display by up
-to one step of simulation time. Holding a button retains its existing per-render
-repeat behavior. The queue holds at most 256 changes; further changes are rejected,
-a warning is printed, and `Particle_Manager.rejected_controls` counts them. A
-rejected toggle can leave the displayed button state different from the physics
-setting; toggle it again after the queue drains to resynchronize.
-
-Run the tests after installing the existing pygame dependency:
+From the repository root:
 
 ```sh
-python -m unittest discover -s tests -v
+python3.12 -m venv .env
+.env/bin/python -m pip install -r requirements.txt
+.env/bin/python Graphics.py
 ```
 
-## Controls
+`Graphics.py` launches the interactive application. Use the dashboard to toggle
+gravity or SPH interaction and change particle count or container dimensions.
+Use the left and right mouse buttons over the simulation area to apply radial
+mouse forces. Press **D** to toggle diagnostic overlays.
 
-- Buttons are used to control various effects such as gravity, repulsion force, ect.
+## Tests and lint
 
-## Installation
+Run the test suite from the repository root:
 
-Use the package manager [pip](https://pip.pypa.io/en/stable/) to install dependencies found in requirements.txt.
-Follow the instructions below to set up your virtual enviornment:
+```sh
+SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy .env/bin/python -m unittest discover -s tests -v
+```
 
-1. Create the virtual environment using python3's venv command
+The CI lint gate uses Ruff 0.17.5, installed separately rather than included in
+runtime requirements:
 
-   > $python3 -m venv /example/path/destination/.env
+```sh
+python3.12 -m pip install ruff==0.17.5
+ruff check .
+```
 
-   - Make sure to include /venv at the end in order to package the environment in a single directory
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and local test guidance.
 
-2. Navigate to the directory containing /.env
-   > $cd /example/path/destination
-3. Activate the virtual environment by calling the 'activate' script
-   Mac/Linux:
+## Physics and performance status
 
-   > $source .env/bin/activate
+The timestep is fixed at 1/120 second, with at most eight substeps processed in
+a rendered frame. If the simulation falls behind, excess time is dropped; this
+keeps the application from accumulating an unbounded backlog, but means
+simulation time can lag wall-clock time under sustained overload. Existing
+force values are calibrated as velocity increments at a 120 Hz reference rate,
+not SI units. SPH forces are converted before entering that legacy force channel.
+Runaway guards cap the legacy force magnitude at 50, speed at 500 px/s, and a
+direct physics step at 1/120 s; negative or non-finite step durations are treated
+as zero. These broad safety limits are not SPH calibration or stability criteria.
 
-   Windows:
+| NumPy candidate | Median step | p95 step | 200-particle frame median | Frame p95 |
+|---|---:|---:|---:|---:|
+| Current experimental candidate | 5.84 ms | 8.97 ms | 45.02 ms | 69.05 ms |
 
-   > C:\\..\destination> .env\\bin\\activate.bat
+The latest full-app run used the optional experimental NumPy solver, 200 particles, a 30 Hz cap, and 300 warmup steps. Over 4.07 seconds it produced 82 frames: mean 48.54 ms, median 45.02 ms, p95 69.05 ms, and maximum 101.24 ms. It processed 467 physics steps (5.63 per frame) and dropped 0.0800 seconds of simulation time.
 
-4. Install dependencies using the included requirements file
+The force, velocity and timestep guards did not activate in the timed run; the measured maximum speed was 6.39 px/s and density ranged from 0.01749 to 0.10762 against rest density 0.004444. The run missed the 33.33 ms budget. These measurements do not establish physical accuracy or stability. Phase 1 remains in progress; no performance success or phase completion is claimed.
 
-   > $pip install -r requirements.txt
+The NumPy solver remains experimental and is not a runtime dependency; `requirements.txt` is still pygame-only. An earlier 60 Hz full-app run also missed its 16.67 ms budget (median 29.82 ms, p95 45.93 ms). The pure-Python baseline was slower: 101.49 ms median frame time and 1.206 seconds dropped over about four seconds.
 
-5. Run Graphics.py
-   > $python3 Graphics.py
+## References
 
-## Dependencies Used
+- [Smoothed-particle hydrodynamics](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics)
+- [Coding Adventure: Simulating Fluids — Sebastian Lague](https://youtu.be/rSKMYc1CQHE)
 
-## Credits
+## Author and licence
 
-- [Smoothed Particle Hydrodynamics Wiki](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics)
-- [Coding Adventure: Simulating Fluids By Sebastian Lague ](https://youtu.be/rSKMYc1CQHE?si=SritZ9ryH0EIech2)
-
-## Author
-
-Lucas Goddin
+Lucas Goddin. Contributions are accepted under the [MIT licence](LICENSE).

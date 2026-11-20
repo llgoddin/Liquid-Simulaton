@@ -4,12 +4,19 @@ from collections import deque
 
 import pygame
 
+import sph
 from New_Vector2D import Vector2D
 from Particle import Particle
 
 FIXED_DT = 1 / 120
 MAX_SUBSTEPS = 8
 MAX_PENDING_CONTROLS = 256
+# Safety guards, not SPH tuning parameters: force is in the legacy per-step
+# impulse channel; the velocity cap is a broad runaway bound; direct steps may
+# never exceed the solver's fixed timestep.
+MAX_FORCE = 50.0
+MAX_VELOCITY = 500.0
+MAX_DT = FIXED_DT
 # Per-step gravity impulse at the reference rate (|a| * FIXED_DT * 120 = 10).
 # A contact whose inward normal speed does not exceed this is treated as a
 # resting contact: the inward component is removed rather than reflected, so a
@@ -28,6 +35,16 @@ class Particle_Manager:
         self.dropped_time = 0.0
         self.pending_controls = deque()
         self.rejected_controls = 0
+        self.max_force = MAX_FORCE
+        self.max_velocity = MAX_VELOCITY
+        self.max_dt = MAX_DT
+        self.clamp_activations = {"force": 0, "velocity": 0, "dt": 0}
+        self.sph_h = sph.H
+        self.sph_rest_density = sph.REST_DENSITY
+        self.sph_stiffness = sph.STIFFNESS
+        self.sph_viscosity = sph.VISCOSITY
+        self.densities = []
+        self.pressures = []
         self.obstacle = None
 
         self.particles = []
@@ -259,25 +276,38 @@ class Particle_Manager:
         return steps
 
     def step(self, dt):
-        # Calculate
-        for i in range(len(self.particles)):
-            if self.REPULSE:
-                for c in range(len(self.particles)):
-                    if i == c:
-                        continue
-
-                    r_force = self.particles[i].repulsion_force(self.particles[c])
-
-                    self.particles[i].apply_force(r_force)
-
-            if self.GRAVITY:
-                gravity = Vector2D(0, -10 * self.particles[i].mass)
-                self.particles[i].apply_force(gravity)
-
+        if not math.isfinite(dt) or dt < 0:
+            dt = 0.0
+            self.clamp_activations["dt"] += 1
+        elif dt > self.max_dt:
+            dt = self.max_dt
+            self.clamp_activations["dt"] += 1
+        # Calculate all SPH terms from one immutable pre-move snapshot.
+        if self.REPULSE:
+            self.densities, self.pressures, sph_forces = sph.solve(
+                self.particles, self.sph_h, self.sph_rest_density,
+                self.sph_stiffness, self.sph_viscosity,
+            )
+            # Particle.move's legacy force channel multiplies acceleration by
+            # 120; convert physical SPH forces so they remain SI-time scaled.
+            for particle, (force_x, force_y) in zip(self.particles, sph_forces, strict=True):
+                particle.apply_force(Vector2D(force_x / 120, force_y / 120))
+        if self.GRAVITY:
+            for particle in self.particles:
+                particle.apply_force(Vector2D(0, -10 * particle.mass))
         # Move
         for particle in self.particles:
             previous_pos = Vector2D(particle.pos.x, particle.pos.y)
+            force = particle.net_force
+            force_magnitude = math.hypot(force.x, force.y)
+            if force_magnitude > self.max_force:
+                particle.net_force = force * (self.max_force / force_magnitude)
+                self.clamp_activations["force"] += 1
             particle.move(dt)
+            speed = math.hypot(particle.velocity.x, particle.velocity.y)
+            if speed > self.max_velocity:
+                particle.velocity = particle.velocity * (self.max_velocity / speed)
+                self.clamp_activations["velocity"] += 1
             self.resolve_obstacle(particle, previous_pos)
 
     def render_mouse_influence(self, screen):
