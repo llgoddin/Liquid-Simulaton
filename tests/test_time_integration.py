@@ -143,6 +143,9 @@ class FixedStepTests(unittest.TestCase):
         def make_manager(**kwargs):
             manager = Particle_Manager(0, 0, 1, 1, 10000, 10000, False, False, True)
             manager.mouse_radius = float('inf')
+            # Redirect Graphics.py's default obstacle away from this mouse-only fixture.
+            set_obstacle = manager.set_obstacle
+            manager.set_obstacle = lambda x, y, radius: set_obstacle(5000, 5000, radius)
             managers.append(manager)
             return manager
 

@@ -4,10 +4,8 @@ Roadmap requirement:
   "The debug overlays are behind a toggle, so the default view is the
    simulation rather than the diagnostics."
 
-The three diagnostics are the 50 px influence disc, the red velocity line
-and the container rectangle. The rectangle was also drawn once per *particle*
-per frame (it sat inside the per-particle loop); it must be drawn once per
-frame.
+The diagnostics are the 50 px influence disc and the red velocity line.
+The container outline is essential context, visible once per frame in both modes.
 """
 
 import os
@@ -50,14 +48,14 @@ class DebugOverlayRenderTests(unittest.TestCase):
         self.assertEqual(len(circles), 3)
         self.assertTrue(all(call[3] == 5 for call in circles), circles)
         self.assertEqual(lines, [])
-        self.assertEqual(rects, [])
+        self.assertEqual(len(rects), 1)
 
     def test_default_view_ignores_explicit_false(self):
         manager = Particle_Manager(0, 0, 2, 5, 100, 100, False, False, True)
         circles, lines, rects = self._capture(manager, debug=False)
         self.assertEqual(len(circles), 2)
         self.assertEqual(lines, [])
-        self.assertEqual(rects, [])
+        self.assertEqual(len(rects), 1)
 
     def test_debug_view_draws_all_diagnostics(self):
         manager = Particle_Manager(0, 0, 3, 5, 100, 100, False, False, True)
@@ -76,9 +74,8 @@ class DebugOverlayRenderTests(unittest.TestCase):
         self.assertEqual(rects[0][1], BOUNDS_COLOR)
 
     def test_obstacle_and_mouse_ring_are_not_diagnostics(self):
-        # The obstacle and the mouse influence ring are part of the simulation,
-        # so the default view still draws them. Only the container rectangle,
-        # the influence disc and the velocity line are diagnostics.
+        # The obstacle, cursor ring and container outline are essential context;
+        # influence discs and velocity lines remain diagnostics.
         manager = Particle_Manager(0, 0, 3, 5, 100, 100, False, False, True)
         manager.set_obstacle(0, 0, 30)
         manager.mouse_pos = (0.0, 0.0)
@@ -90,7 +87,7 @@ class DebugOverlayRenderTests(unittest.TestCase):
         self.assertIn(RING_COLOR, colours)
         # The default view still carries no diagnostics.
         self.assertEqual(lines, [])
-        self.assertEqual(rects, [])
+        self.assertEqual(len(rects), 1)
 
 
 class DebugToggleIntegrationTests(unittest.TestCase):

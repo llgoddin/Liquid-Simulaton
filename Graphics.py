@@ -1,3 +1,4 @@
+import math
 import time
 
 import pygame
@@ -6,204 +7,176 @@ from Button import Button
 from Dashboard import Dashboard
 from Particle_Manager import Particle_Manager
 from Text_Label import Text_Label
+from ui_controls import CountRepeater
+
+SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
+FPS = 120
+UI_PARTICLE_CAP = 200
+DEBUG_KEY = pygame.K_d
 
 
-def update_container_settings(p_manager, dash, fps):
-    def enqueue(action):
-        if not p_manager.queue_control(action):
-            print('Dashboard control rejected: pending control queue is full')
+def queue(manager, action):
+    if not manager.queue_control(action):
+        print('Dashboard control rejected: pending control queue is full')
 
-    for element in dash.get_elements():
-        if element.get_clicked():
-            match element.func_str:
-                case 'Gravity':
-                    enqueue(lambda active=element.active: p_manager.set_gravity(active))
 
-                case 'Repulse':
-                    enqueue(lambda active=element.active: p_manager.set_repulse(active))
+def queue_count(manager, action):
+    # Check the count at execution time: several queued clicks can share a step.
+    def apply():
+        if action == '+ Particle' and manager.num_particles < UI_PARTICLE_CAP:
+            manager.spawn_particle()
+        elif action == '- Particle' and manager.num_particles > 0:
+            manager.delete_particle()
+    queue(manager, apply)
 
-                case '+ Particle':
-                    enqueue(p_manager.spawn_particle)
 
-                case '- Particle':
-                    enqueue(p_manager.delete_particle)
+def queue_bounds(manager, axis, change):
+    def apply():
+        # Keep the box within the play area and large enough for the obstacle.
+        radius = manager.obstacle[2] if manager.obstacle else 0
+        minimum = max(10, radius + manager.particle_radius + 1)
+        if axis == 'width':
+            manager.update_bounds(max(minimum, min(290, manager.X_BOUND + change)), manager.Y_BOUND)
+        else:
+            manager.update_bounds(manager.X_BOUND, max(minimum, min(290, manager.Y_BOUND + change)))
+    queue(manager, apply)
 
-                #TO DO - IMPLEMENT
-                case '+ Container Width':
-                    enqueue(p_manager.increase_container_width)
 
-                case '- Container Width':
-                    enqueue(p_manager.decrease_container_width)
+def handle_dashboard_press(manager, element, repeater, now):
+    action = element.func_str
+    if action == 'Gravity':
+        queue(manager, lambda active=element.active: manager.set_gravity(active))
+    elif action in ('+ Particle', '- Particle'):
+        repeater.press(action, now)
+        queue_count(manager, action)
+    elif action in ('+ Container Width', '- Container Width'):
+        queue_bounds(manager, 'width', 1 if action[0] == '+' else -1)
+    elif action in ('+ Container Height', '- Container Height'):
+        queue_bounds(manager, 'height', 1 if action[0] == '+' else -1)
+    elif action in ('+ Strength', '- Strength'):
+        delta = 1 if action[0] == '+' else -1
+        queue(manager, lambda: setattr(manager, 'mouse_strength', max(0, min(100, manager.mouse_strength + delta))))
+    elif action in ('+ Radius', '- Radius'):
+        delta = 10 if action[0] == '+' else -10
+        queue(manager, lambda: setattr(manager, 'mouse_radius', max(10, min(300, manager.mouse_radius + delta))))
 
-                case '+ Container Height':
-                    enqueue(p_manager.increase_container_height)
 
-                case '- Container Height':
-                    enqueue(p_manager.decrease_container_height)
+def obstacle_hit(manager, pos):
+    if manager.obstacle is None:
+        return False
+    x, y, radius = manager.obstacle
+    return math.hypot(pos[0] - manager.x - x, manager.y - pos[1] - y) <= radius
 
-                case '+ Repulse Force':
-                    #p_manager.increase_repulse()
-                    continue
-                case '- Repulse Force':
-                    #p_manager.decrease_repulse()
-                    continue
-                case 'Particle Count':
-                    element.set_text(f'Particles: {p_manager.num_particles}')
-                case 'FPS Count':
-                    element.set_text(f'FPS: {fps}')
 
-btn_height = 40
-btn_width = 100
+def local_position(manager, pos):
+    return pos[0] - manager.x, manager.y - pos[1]
 
-x_padding = 10
-y_padding = 100
-
-buffer = 10
-
-grav_btn = Button(x_padding, y_padding + (btn_height + buffer) * 0, btn_width, btn_height, (0, 0, 200), 'Gravity', True, 'Gravity')
-repulse_btn = Button(x_padding, y_padding + (btn_height + buffer) * 1, btn_width, btn_height, (80, 0, 200), 'Repulse', True, 'Repulse')
-add_particle_btn = Button(x_padding, y_padding + (btn_height + buffer) * 2, btn_width, btn_height, (120, 0, 200), '+ Particles', False, '+ Particle')
-subtract_particle_btn = Button(x_padding, y_padding + (btn_height + buffer) * 3, btn_width, btn_height, (80, 30, 200), '- Particles', False, '- Particle')
-increase_container_width_btn = Button(x_padding, y_padding + (btn_height + buffer) * 4, btn_width, btn_height, (80, 30, 200), '+ Width', False, '+ Container Width')
-decrease_container_width_btn = Button(x_padding, y_padding + (btn_height + buffer) * 5, btn_width, btn_height, (80, 30, 200), '- Width', False, '- Container Width')
-increase_container_height_btn = Button(x_padding, y_padding + (btn_height + buffer) * 6, btn_width, btn_height, (80, 30, 200), '+ Height', False, '+ Container Height')
-decrease_container_height_btn = Button(x_padding, y_padding + (btn_height + buffer) * 7, btn_width, btn_height, (80, 30, 200), '- Height', False, '- Container Height')
-
-particle_num_lbl = Text_Label(10, 10, 100, 30, (0, 0, 255), 'Particles: 1', 'Particle Count')
-fps_lbl = Text_Label(10, 30, 100, 30, (0, 0, 255), 'FPS: 1', 'FPS Count')
-
-dash = Dashboard(600, 0, 200, 800)
-
-dash.add_element(grav_btn)
-dash.add_element(repulse_btn)
-dash.add_element(add_particle_btn)
-dash.add_element(subtract_particle_btn)
-dash.add_element(increase_container_width_btn)
-dash.add_element(decrease_container_width_btn)
-dash.add_element(increase_container_height_btn)
-dash.add_element(decrease_container_height_btn)
-
-dash.add_element(particle_num_lbl)
-dash.add_element(fps_lbl)
 
 pygame.init()
 CLOCK = pygame.time.Clock()
-
-
-#CONSTANTS
-
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
-
-FPS = 120
-DASH_FPS = FPS / 10
-
-SLOW_TIME_BY = 1
-
-# Diagnostics (container rectangle, influence disc, velocity line) are opt-in:
-# the default view is the simulation. Press D to toggle the debug overlays.
-DEBUG_KEY = pygame.K_d
-debug_overlays = False
-
-NUM_PARTICLES = 2
-
-VERTICAL_SPAWN = True
-
-GRAVITY = False
-REPULSE = True
-
-CONTAINER = (200, 200)
-
-
-# Calculated Variables
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Liquid Simulator")
-liquid = Particle_Manager(x=(SCREEN_WIDTH/2 - 100), y=SCREEN_HEIGHT/2, num_particles=NUM_PARTICLES, radius=5, x_bounds=CONTAINER[0]/2, y_bounds=CONTAINER[1]/2, gravity=GRAVITY, repulse=REPULSE, vertical_spawn=VERTICAL_SPAWN)
+pygame.display.set_caption('Liquid Simulator')
+liquid = Particle_Manager(x=300, y=300, num_particles=30, radius=5, x_bounds=100,
+                          y_bounds=100, gravity=False, repulse=True, vertical_spawn=True)
+liquid.set_obstacle(0, 0, 30)
 
-# Static circular obstacle at the centre of the container. Its radius is scaled
-# to the container so it is always visible and always fits inside the bounds.
-OBSTACLE_RADIUS = min(CONTAINER[0], CONTAINER[1]) / 2 * 0.3
-liquid.set_obstacle(0, 0, OBSTACLE_RADIUS)
+dash = Dashboard(600, 0, 200, 600)
+button_color = (51, 69, 84)
+buttons = [
+    Button(10, 100, 180, 40, button_color, 'Gravity', liquid.GRAVITY, 'Gravity'),
+    Button(10, 150, 180, 40, button_color, 'Mouse forces', True, 'Mouse interaction'),
+    Button(10, 200, 100, 40, button_color, '+ Particles', False, '+ Particle'),
+    Button(10, 250, 100, 40, button_color, '- Particles', False, '- Particle'),
+    Button(10, 300, 100, 40, button_color, '+ Width', False, '+ Container Width'),
+    Button(10, 350, 100, 40, button_color, '- Width', False, '- Container Width'),
+    Button(10, 400, 100, 40, button_color, '+ Height', False, '+ Container Height'),
+    Button(10, 450, 100, 40, button_color, '- Height', False, '- Container Height'),
+    Button(115, 200, 75, 40, button_color, 'Force +', False, '+ Strength'),
+    Button(115, 250, 75, 40, button_color, 'Force -', False, '- Strength'),
+    Button(115, 300, 75, 40, button_color, 'Radius +', False, '+ Radius'),
+    Button(115, 350, 75, 40, button_color, 'Radius -', False, '- Radius'),
+]
+for button in buttons:
+    dash.add_element(button)
+grav_btn, mouse_btn = buttons[:2]
+labels = [
+    Text_Label(5, 5, 190, 25, button_color, 'LIQUID SIMULATOR', 'heading'),
+    Text_Label(5, 30, 190, 25, button_color, '', 'Particle Count'),
+    Text_Label(5, 55, 190, 25, button_color, '', 'FPS Count'),
+    Text_Label(5, 495, 190, 20, button_color, '', 'settings'),
+    Text_Label(5, 515, 190, 20, button_color, 'Left: attract / move', 'help1'),
+    Text_Label(5, 535, 190, 20, button_color, 'Right: repel', 'help2'),
+    Text_Label(5, 555, 190, 20, button_color, 'D: diagnostics', 'help3'),
+]
+for label in labels:
+    dash.add_element(label)
 
-dash_tick = 0
-
-now = 0
+repeater = CountRepeater()
 prev_time = None
-
-mouse_left = False
-mouse_right = False
-
+mouse_left = mouse_right = obstacle_dragging = False
+drag_offset = (0.0, 0.0)
+debug_overlays = False
 run = True
-
-# Main Loop
 while run:
-
     CLOCK.tick(FPS)
-
-    dash_tick += 1
-
     now = time.monotonic()
-
-    if not prev_time:
-        prev_time = now
-
-    dt = now - prev_time
+    dt = 0 if prev_time is None else now - prev_time
     prev_time = now
-
-    dt = dt / SLOW_TIME_BY
-
     screen.fill((230, 230, 230))
 
-    # The pre-event button state describes the interval that just elapsed.
+    # Input states describe the elapsed interval, before processing new events.
     mouse_forces = []
-    if mouse_left:
-        pos = pygame.mouse.get_pos()
-        if not pos[0] > dash.x:
+    pos = pygame.mouse.get_pos()
+    if mouse_btn.active and pos[0] < dash.x:
+        if mouse_left:
             mouse_forces.append((pos, False))
-
-    if mouse_right:
-        pos = pygame.mouse.get_pos()
-        if not pos[0] > dash.x:
+        if mouse_right:
             mouse_forces.append((pos, True))
-
-    # Consume the elapsed interval before applying newly received controls.
     liquid.advance(dt, mouse_forces)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
-
-        if event.type == pygame.KEYDOWN:
-            if event.key == DEBUG_KEY:
-                debug_overlays = not debug_overlays
-
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
-                mouse_left = True
-
-            elif event.button == 3:
-                mouse_right = True
-
-            pos = pygame.mouse.get_pos()
-
-            if pos[0] > dash.x:
+        elif event.type == pygame.KEYDOWN and event.key == DEBUG_KEY:
+            debug_overlays = not debug_overlays
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            pos = getattr(event, 'pos', pygame.mouse.get_pos())
+            if event.button == 1 and pos[0] >= dash.x:
                 dash.check_click(pos)
-
-        if event.type == pygame.MOUSEBUTTONUP:
+                for button in buttons:
+                    if button.get_clicked():
+                        handle_dashboard_press(liquid, button, repeater, now)
+                        break
+            elif event.button == 1 and obstacle_hit(liquid, pos):
+                obstacle_dragging = True
+                px, py = local_position(liquid, pos)
+                drag_offset = (liquid.obstacle[0] - px, liquid.obstacle[1] - py)
+            elif event.button == 1:
+                mouse_left = True
+            elif event.button == 3 and pos[0] < dash.x:
+                mouse_right = True
+        elif event.type == pygame.MOUSEMOTION and obstacle_dragging:
+            px, py = local_position(liquid, event.pos)
+            target = (px + drag_offset[0], py + drag_offset[1])
+            queue(liquid, lambda target=target: liquid.move_obstacle(*target))
+        elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
                 mouse_left = False
-
+                obstacle_dragging = False
+                repeater.release()
+                dash.reset_clicked_elements()
             elif event.button == 3:
                 mouse_right = False
 
-            dash.reset_clicked_elements()
-
-    update_container_settings(liquid, dash, int(CLOCK.get_fps()))
-
+    for _ in range(repeater.update(now)):
+        queue_count(liquid, repeater.action)
+    grav_btn.text = f'Gravity: {"on" if grav_btn.active else "off"}'
+    mouse_btn.text = f'Mouse forces: {"on" if mouse_btn.active else "off"}'
+    labels[1].set_text(f'Particles: {liquid.num_particles} / {UI_PARTICLE_CAP}')
+    labels[2].set_text(f'FPS: {int(CLOCK.get_fps())}  |  SPH on')
+    labels[3].set_text(f'Force {liquid.mouse_strength:g}  |  Radius {liquid.mouse_radius:g}')
     liquid.render(screen=screen, debug=debug_overlays)
-
     dash.render(screen=screen)
-
     pygame.display.update()
 
 pygame.quit()
