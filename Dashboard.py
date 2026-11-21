@@ -5,7 +5,7 @@ from GUI_Element import GUI_Element
 
 class Dashboard(GUI_Element):
     def __init__(self, x, y, width, height):
-        super().__init__(x, y, width, height, color=(100, 100, 100))
+        super().__init__(x, y, width, height, color=(26, 36, 46))
 
         self.elements = []
 

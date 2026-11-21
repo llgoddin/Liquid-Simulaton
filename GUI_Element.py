@@ -22,7 +22,6 @@ class GUI_Element:
     def set_clicked(self, value):
         if self.clicked != value:
             self.clicked = value
-            print(f'Set Clicked to {value}')
 
     def get_clicked(self):
         return False

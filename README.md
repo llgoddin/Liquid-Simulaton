@@ -1,35 +1,17 @@
 # Liquid-Simulaton
 
-Liquid-Simulaton is an experimental 2D particle-fluid simulation written in
-Python and pygame. It uses Smoothed Particle Hydrodynamics (SPH) for particle
-interactions. The Python implementation does not reach the recorded 200-particle/30-fps target; Lucas has decided further performance optimization belongs to Phase 2's Rust rewrite. Phase 1 remains in progress pending physics qualification.
+An experimental 2D particle-fluid simulator in Python and pygame. The fluid uses
+smoothed particle hydrodynamics (SPH); its boundary treatment and performance
+have important limitations described below and in [SPH.md](SPH.md).
 
-## Current features
+![Simulator with particle fluid, draggable obstacle and controls](docs/simulator.png)
 
-- Fixed-step physics at 120 Hz, independent of render timing, with a maximum of
-eight substeps per frame. Excess elapsed time is dropped and accumulated in
-`Particle_Manager.dropped_time`.
-- SPH particle interaction, controlled by the existing **Repulse** dashboard
-toggle. The control retains its historical name; it enables the SPH solver.
-- Gravity and particle-count controls, plus adjustable container dimensions.
-- Radial mouse interaction: left and right mouse buttons apply opposite force
-directions; the influence radius is shown around the cursor.
-- A circular obstacle in the simulation container.
-- Optional diagnostic overlays, toggled with **D**: container bounds,
-per-particle influence discs and velocity lines. The particles, obstacle and
-mouse influence ring remain visible in the normal view.
-- Dashboard with particle count and FPS readouts.
-- `unittest` coverage and GitHub Actions CI for tests and linting.
+## Run
 
-## Requirements and setup
-
-Python 3.12 is the supported and CI-tested version. The sole runtime dependency
-is pygame, pinned in `requirements.txt`; NumPy is not a runtime dependency. Python
-and pygame are retained for this phase because they are the existing working
-application stack, and the scope is to add/test the fluid model without replacing
-the renderer or dashboard.
-
-From the repository root:
+Python 3.12 is the supported and CI-tested version. The only required runtime
+dependency is pygame, pinned in `requirements.txt`. This version retains Python
+and pygame because the existing application and its tests already use them;
+replacing the renderer or language is outside this update.
 
 ```sh
 python3.12 -m venv .env
@@ -37,56 +19,65 @@ python3.12 -m venv .env
 .env/bin/python Graphics.py
 ```
 
-`Graphics.py` launches the interactive application. Use the dashboard to toggle
-gravity or SPH interaction and change particle count or container dimensions.
-Use the left and right mouse buttons over the simulation area to apply radial
-mouse forces. Press **D** to toggle diagnostic overlays.
+## Controls
 
-## Tests and lint
+- Drag with the left mouse button to attract particles; drag with the right to
+  repel them. The influence ring shows the current radius. The mouse-force toggle
+  affects these gestures, not the SPH fluid solver, which remains on.
+- Left-drag the circular obstacle itself to move it within the container. The
+  kinematic obstacle displaces particles but does not impart a velocity impulse.
+- Toggle gravity, add or remove particles, and adjust the container dimensions
+  from the side panel. Hold a particle button to repeat: the first change is
+  immediate, followed by a 0.4-second delay and a smoothly accelerating repeat.
+  The interactive controls allow 0–200 particles; the model and tests do not
+  impose the UI cap.
+- Adjust mouse force and radius with the side-panel buttons. Press `D` to toggle
+  influence-disc and velocity diagnostics. The container outline, obstacle,
+  particles and mouse ring remain visible in the normal view.
 
-Run the test suite from the repository root:
+## Physics and performance
+
+The simulation advances in fixed 1/120-second physics steps, with at most eight
+steps per frame. Excess elapsed time is dropped, so simulation time can lag
+behind wall-clock time under load. Force, speed and timestep guards protect
+against runaway values; they are not proof of physical accuracy.
+
+The circular and planar walls use approximate reflected SPH samples plus
+collision projection. Dynamic and static wall tests cover the cases documented
+in [SPH.md](SPH.md), not every fluid or obstacle configuration. Mouse-force
+values use the original 120 Hz reference-rate convention; SPH and gravity are
+converted to that channel once.
+
+A fresh headless full-application run on macOS 15.8.3 (Intel i9-9880H), Python
+3.12.0 and pygame 2.5.2 used 200 particles, gravity and SPH, a 200 × 200 box,
+a radius-30 obstacle, 300 warmup steps and an 8-second sample at a 30 Hz cap.
+It produced 38 measured frames: mean 210.93 ms, median 210.89 ms, p95 237.88 ms,
+maximum 238.38 ms, and 7.95 physics steps per frame. It dropped 5.28 seconds of
+simulation time, recorded densities 0.00220–0.06822 and maximum speed 54.21 px/s,
+and activated no guards. The 33.33 ms frame budget was **not met**. This is one
+machine and one workload, not a universal frame rate; further optimization and
+the 3D/Rust rewrite are deferred to v3.0.
+
+A separate physics-only 60-second qualification ran 7,200 steps, remained
+finite, had no obstacle penetration or guard activations, and measured maximum
+speed 42.73 px/s and density 0.3183–2.4598 times rest density. It is not an
+application frame-rate test or a general physical-accuracy certification.
+
+## Tests and contribution
 
 ```sh
 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy .env/bin/python -m unittest discover -s tests -v
+.env/bin/python -m ruff check .
+SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy .env/bin/python scripts/qualify_sph.py --seconds 60
 ```
 
-The CI lint gate uses Ruff 0.17.5, installed separately rather than included in
-runtime requirements:
+Ruff 0.17.5 is the CI lint tool and is installed separately, not as a runtime
+dependency. See [CONTRIBUTING.md](CONTRIBUTING.md) and [SPH.md](SPH.md) for
+the contribution process, equations, qualification and limitations.
 
-```sh
-python3.12 -m pip install ruff==0.17.5
-ruff check .
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and local test guidance.
-
-## Physics and performance status
-
-The timestep is fixed at 1/120 second, with at most eight substeps processed in
-a rendered frame. If the simulation falls behind, excess time is dropped; this
-keeps the application from accumulating an unbounded backlog, but means
-simulation time can lag wall-clock time under sustained overload. Existing
-force values are calibrated as velocity increments at a 120 Hz reference rate,
-not SI units. SPH forces are converted before entering that legacy force channel.
-Runaway guards cap the legacy force magnitude at 50, speed at 500 px/s, and a
-direct physics step at 1/120 s; negative or non-finite step durations are treated
-as zero. These broad safety limits are not SPH calibration or stability criteria.
-
-| NumPy candidate | Median step | p95 step | 200-particle frame median | Frame p95 |
-|---|---:|---:|---:|---:|
-| Current experimental candidate | 5.84 ms | 8.97 ms | 45.02 ms | 69.05 ms |
-
-The latest full-app run used the optional experimental NumPy solver, 200 particles, a 30 Hz cap, and 300 warmup steps. Over 4.07 seconds it produced 82 frames: mean 48.54 ms, median 45.02 ms, p95 69.05 ms, and maximum 101.24 ms. It processed 467 physics steps (5.63 per frame) and dropped 0.0800 seconds of simulation time.
-
-The force, velocity and timestep guards did not activate in the timed run; the measured maximum speed was 6.39 px/s and density ranged from 0.01749 to 0.10762 against rest density 0.004444. The run missed the 33.33 ms budget. Lucas has decided that further Python performance optimization belongs to Phase 2's Rust rewrite, so this gap is documented rather than optimized further in this phase. These measurements do not establish physical accuracy or stability. Phase 1 remains in progress pending physics qualification; no performance pass or phase completion is claimed.
-
-The NumPy solver remains experimental and is not a runtime dependency; `requirements.txt` is still pygame-only. An earlier 60 Hz full-app run also missed its 16.67 ms budget (median 29.82 ms, p95 45.93 ms). The pure-Python baseline was slower: 101.49 ms median frame time and 1.206 seconds dropped over about four seconds.
-
-## References
+## References and licence
 
 - [Smoothed-particle hydrodynamics](https://en.wikipedia.org/wiki/Smoothed-particle_hydrodynamics)
 - [Coding Adventure: Simulating Fluids — Sebastian Lague](https://youtu.be/rSKMYc1CQHE)
-
-## Author and licence
 
 Lucas Goddin. Contributions are accepted under the [MIT licence](LICENSE).

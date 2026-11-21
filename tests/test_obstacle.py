@@ -5,6 +5,76 @@ from Particle_Manager import Particle_Manager
 
 
 class ObstacleTests(unittest.TestCase):
+    def test_move_obstacle_clamps_center_to_container(self):
+        manager = Particle_Manager(0, 0, 1, 2, 50, 40, False, False, True)
+        manager.set_obstacle(0, 0, 10)
+        manager.move_obstacle(100, -100)
+        self.assertEqual(manager.obstacle, (40, -30, 10))
+
+    def test_move_obstacle_clamps_after_container_shrinks(self):
+        manager = Particle_Manager(0, 0, 1, 2, 50, 40, False, False, True)
+        manager.set_obstacle(35, 25, 10)
+        manager.update_bounds(20, 15)
+        manager.move_obstacle(35, 25)
+        self.assertEqual(manager.obstacle, (10, 5, 10))
+
+    def test_move_obstacle_displaces_particle_instead_of_overlapping(self):
+        manager = Particle_Manager(0, 0, 1, 2, 100, 100, False, False, True)
+        manager.set_obstacle(-30, 0, 10)
+        particle = manager.particles[0]
+        particle.pos = Vector2D(0, 0)
+        manager.move_obstacle(0, 0)
+        self.assertGreaterEqual((particle.pos.x ** 2 + particle.pos.y ** 2) ** 0.5, 12 - 1e-9)
+
+    def test_spawned_particle_is_resolved_from_obstacle(self):
+        manager = Particle_Manager(0, 0, 0, 2, 100, 100, False, False, True)
+        manager.set_obstacle(0, 0, 10)
+        manager.spawn_particle()
+        particle = manager.particles[0]
+        self.assertGreaterEqual((particle.pos.x ** 2 + particle.pos.y ** 2) ** 0.5, 12 - 1e-9)
+
+    def test_setting_obstacle_resolves_initial_particles_before_sph(self):
+        from unittest.mock import patch
+        manager = Particle_Manager(0, 0, 25, 2, 100, 100, False, True, True)
+        manager.set_obstacle(0, 0, 10)
+        def inspect_before_sph(particles, *args, **kwargs):
+            for particle in particles:
+                self.assertGreaterEqual((particle.pos.x ** 2 + particle.pos.y ** 2) ** 0.5, 12 - 1e-9)
+            return [], [], [(0, 0)] * len(particles)
+        with patch('sph.solve', side_effect=inspect_before_sph):
+            manager.step(0)
+
+    def test_swept_obstacle_motion_keeps_particles_in_container(self):
+        manager = Particle_Manager(0, 0, 1, 2, 50, 50, False, False, True)
+        manager.set_obstacle(0, 0, 10)
+        particle = manager.particles[0]
+        particle.pos = Vector2D(45, 0)
+        particle.velocity = Vector2D(0, 0)
+        manager.move_obstacle(40, 0)
+        self.assertLessEqual(abs(particle.pos.x) + particle.radius, manager.X_BOUND + 1e-9)
+        self.assertLessEqual(abs(particle.pos.y) + particle.radius, manager.Y_BOUND + 1e-9)
+        ox, oy, _ = manager.obstacle
+        self.assertGreaterEqual(((particle.pos.x - ox) ** 2 + (particle.pos.y - oy) ** 2) ** 0.5, 12 - 1e-9)
+        self.assertEqual((particle.velocity.x, particle.velocity.y), (0, 0))
+
+    def test_corner_sweep_preserves_box_and_obstacle_exclusion(self):
+        manager = Particle_Manager(0, 0, 1, 2, 50, 50, False, False, True)
+        manager.set_obstacle(-30, -30, 10)
+        particle = manager.particles[0]
+        particle.pos = Vector2D(48, 48)
+        particle.velocity = Vector2D(0, 0)
+        manager.move_obstacle(40, 40)
+        self.assertLessEqual(abs(particle.pos.x) + particle.radius, manager.X_BOUND + 1e-9)
+        self.assertLessEqual(abs(particle.pos.y) + particle.radius, manager.Y_BOUND + 1e-9)
+        ox, oy, _ = manager.obstacle
+        self.assertGreaterEqual(((particle.pos.x - ox) ** 2 + (particle.pos.y - oy) ** 2) ** 0.5, 12 - 1e-9)
+
+    def test_shrinking_bounds_reclamps_obstacle_immediately(self):
+        manager = Particle_Manager(0, 0, 1, 2, 50, 40, False, False, True)
+        manager.set_obstacle(35, 25, 10)
+        manager.update_bounds(20, 15)
+        self.assertEqual(manager.obstacle, (10, 5, 10))
+
     def test_particle_overlap_is_corrected_to_radius_aware_surface(self):
         manager = Particle_Manager(0, 0, 1, 2, 100, 100, False, False, True)
         manager.set_obstacle(0, 0, 10)
@@ -46,7 +116,7 @@ class ObstacleTests(unittest.TestCase):
         self.assertAlmostEqual(particle.velocity.y, 0)
 
     def test_high_speed_particle_cannot_tunnel_through(self):
-        manager = Particle_Manager(0, 0, 1, 2, 100, 100, False, False, True)
+        manager = Particle_Manager(0, 0, 1, 2, 100, 100, False, True, True)
         manager.set_obstacle(0, 0, 10)
         particle = manager.particles[0]
         particle.pos = Vector2D(0, -40)
